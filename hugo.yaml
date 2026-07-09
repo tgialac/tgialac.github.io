@@ -1,0 +1,94 @@
+baseURL: "https://tgialac.github.io/"
+title: Lac's World
+theme: PaperMod
+
+pagination:
+  pagerSize: 8
+
+enableRobotsTXT: true
+buildDrafts: false
+buildFuture: false
+enableEmoji: true
+
+minify:
+  disableXML: true
+
+outputs:
+  home:
+    - HTML
+    - RSS
+    - JSON # needed for search
+
+menu:
+  main:
+    - identifier: archives
+      name: Archive
+      url: /archives/
+      weight: 10
+    - identifier: search
+      name: Search
+      url: /search/
+      weight: 20
+    - identifier: tags
+      name: Tags
+      url: /tags/
+      weight: 30
+    - identifier: about
+      name: About
+      url: /about/
+      weight: 40
+
+params:
+  env: production
+  title: Lac's World
+  description: "Personal blog of Tran Gia Lac"
+  keywords: [Blog, Portfolio]
+  author: Tran Gia Lac
+  DateFormat: "January 2, 2006"
+
+  defaultTheme: auto
+  disableThemeToggle: false
+
+  ShowReadingTime: true
+  ShowShareButtons: false
+  ShowPostNavLinks: true
+  ShowBreadCrumbs: true
+  ShowCodeCopyButtons: true
+  ShowWordCount: false
+  ShowRssButtonInSectionTermList: true
+  ShowToc: true
+  TocOpen: false
+
+  homeInfoParams:
+    Title: "\U0001F44B Welcome to Lac's World"
+    Content: >
+      Hi, this is Lac. I write about what I learn,
+      the projects I build, and the interesting things
+      I pick up along the way.
+
+  socialIcons:
+    - name: github
+      url: "https://github.com/tgialac"
+    - name: email
+      url: "mailto:work.trangialac@gmail.com"
+    - name: rss
+      url: "/index.xml"
+
+  assets:
+    favicon: "/favicon.svg"
+    disableHLJS: true
+
+  fuseOpts:
+    isCaseSensitive: false
+    shouldSort: true
+    minMatchCharLength: 0
+    keys: ["title", "permalink", "summary", "content"]
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+  highlight:
+    noClasses: false
+    codeFences: true
+    guessSyntax: true
