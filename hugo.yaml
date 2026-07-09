@@ -50,7 +50,7 @@ params:
   disableThemeToggle: false
 
   ShowReadingTime: true
-  ShowShareButtons: false
+  ShowShareButtons: true
   ShowPostNavLinks: true
   ShowBreadCrumbs: true
   ShowCodeCopyButtons: true
@@ -69,14 +69,34 @@ params:
   socialIcons:
     - name: github
       url: "https://github.com/tgialac"
+    - name: linkedin
+      url: "https://www.linkedin.com/in/YOUR-LINKEDIN"
+    - name: x
+      url: "https://x.com/YOUR-X-HANDLE"
+    - name: facebook
+      url: "https://www.facebook.com/YOUR-FACEBOOK"
+    - name: googlescholar
+      url: "https://scholar.google.com/citations?user=YOUR-SCHOLAR-ID"
+    - name: whatsapp
+      url: "https://wa.me/YOUR-PHONE-NUMBER"
+    - name: discord
+      url: "https://discord.com/users/YOUR-DISCORD-ID"
     - name: email
       url: "mailto:work.trangialac@gmail.com"
-    - name: rss
-      url: "/index.xml"
 
   assets:
     favicon: "/favicon.svg"
     disableHLJS: true
+
+  editPost:
+    URL: "https://github.com/tgialac/tgialac.github.io/edit/main/content"
+    Text: "Suggest Changes"
+    appendFilePath: true
+
+  cover:
+    hidden: false
+    hiddenInList: false
+    hiddenInSingle: false
 
   fuseOpts:
     isCaseSensitive: false

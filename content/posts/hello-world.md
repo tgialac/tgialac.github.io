@@ -4,6 +4,9 @@ date: 2026-07-09T10:00:00+07:00
 tags: ["misc"]
 math: true
 summary: "The first post on Lac's World — my personal blog, where I write down what I learn and the interesting things I pick up along the way."
+cover:
+  image: "/images/covers/hello-world.svg"
+  alt: "Hello World cover with a robot"
 ---
 
 Hi there! This is the first post on **Lac's World** — my personal blog, where I write down what I learn and the interesting things I pick up along the way.
