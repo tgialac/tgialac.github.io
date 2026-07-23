@@ -81,7 +81,7 @@ For FleetMate, “produce an estimate” would be a weak definition. A stronger 
 
 This is evaluation-driven development in its useful form. Evaluation is not a final exam for an agent that has already been built. It is the instrument panel that tells the team what to build toward.
 
-{{< figure src="/images/illustrations/evidence-contract.png" alt="An evidence contract flows from business outcome to evaluation criteria and production monitoring, with measures for outcomes, quality, efficiency, and governance" caption="An evidence contract connects the business outcome to pre-deployment evaluation and production monitoring." >}}
+{{< figure src="/images/illustrations/evidence-contract.png" alt="An evidence contract moves from a business outcome through output quality, trajectory quality, safety and compliance, and reliability and stability to production monitoring" caption="An evidence contract connects the business outcome to pre-deployment evaluation and production monitoring." >}}
 
 ## Why a polished output is weak evidence
 

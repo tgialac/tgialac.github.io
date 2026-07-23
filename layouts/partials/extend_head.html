@@ -9,3 +9,26 @@
     {left: '\\[', right: '\\]', display: true}
   ]});"></script>
 {{- end }}
+
+<style>
+.list .post-entry {
+  margin-bottom: 1.5rem;
+  padding: 0 0 1.5rem;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  transition: none;
+}
+
+.list .post-entry:hover,
+.list .post-entry:focus-within {
+  transform: none;
+  border-color: var(--border);
+}
+
+.list .post-entry:hover .entry-header h2 {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+</style>

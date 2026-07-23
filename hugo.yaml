@@ -21,6 +21,10 @@ outputs:
 
 menu:
   main:
+    - identifier: posts
+      name: Posts
+      url: /posts/
+      weight: 5
     - identifier: archives
       name: Archive
       url: /archives/
@@ -95,7 +99,7 @@ params:
 
   cover:
     hidden: false
-    hiddenInList: false
+    hiddenInList: true
     hiddenInSingle: false
 
   fuseOpts:
