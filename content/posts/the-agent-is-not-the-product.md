@@ -5,8 +5,8 @@ tags: ["ai", "agents", "strategy", "evaluation", "governance"]
 math: true
 summary: "The hard part of enterprise AI is not standing up an agent. It is designing the system of outcomes, evidence, controls, and learning that makes an agent worth trusting at scale."
 cover:
-  image: "/images/covers/the-agent-is-not-the-product.svg"
-  alt: "A diagram connecting a business outcome to an AI system, evidence, and a learning loop"
+  image: "/images/covers/from-workflow-to-business-outcome.png"
+  alt: "A workflow diagram connecting business outcomes, an AI agent system, evidence and metrics, feedback, and continuous learning"
 ---
 
 An AI agent can look astonishing in a demo and still be worthless to a business.
