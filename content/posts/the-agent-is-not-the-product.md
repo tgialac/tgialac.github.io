@@ -81,6 +81,8 @@ For FleetMate, “produce an estimate” would be a weak definition. A stronger 
 
 This is evaluation-driven development in its useful form. Evaluation is not a final exam for an agent that has already been built. It is the instrument panel that tells the team what to build toward.
 
+{{< figure src="/images/illustrations/evidence-contract.png" alt="An evidence contract flows from business outcome to evaluation criteria and production monitoring, with measures for outcomes, quality, efficiency, and governance" caption="An evidence contract connects the business outcome to pre-deployment evaluation and production monitoring." >}}
+
 ## Why a polished output is weak evidence
 
 Agents are sequential systems. They retrieve, plan, call tools, update state, retry, and finally answer or act. An attractive final response may conceal an incorrect tool choice, a malformed parameter, a discarded warning, or five wasteful retries.
@@ -90,6 +92,8 @@ The arithmetic illustrates the fragility. If a ten-step path had ten independent
 $$0.9^{10} \approx 35\%$$
 
 Real systems are more complicated than that toy calculation—steps are not independent and failure can sometimes be recovered—but its lesson is sound: long-horizon performance cannot be inferred from a few impressive final answers.
+
+{{< figure src="/images/illustrations/good-output-reliable-agent.png" alt="Two agents produce the same final answer: one follows a clear policy-compliant trace, while the other uses incorrect tools, retries wastefully, and bypasses policy" caption="The output alone cannot tell us whether the path was reliable, efficient, or safe." >}}
 
 Research on tool-using agents now makes the same point explicitly. TRAJECT-Bench evaluates not just the final answer but whether tools were selected, parameterized, and ordered correctly, exposing failure modes that output-only scoring misses. [TRAJECT-Bench](https://arxiv.org/abs/2510.04550)
 
@@ -111,6 +115,8 @@ FleetMate shows how agentic systems can change an operational SLA. Morgan Stanle
 The firm evaluates each use case against real work with expert feedback before deployment. Its internal assistant helps financial advisors retrieve and synthesize firm knowledge; its meeting-debrief tool creates notes and draft follow-ups that advisors review and edit before anything reaches a client. According to Morgan Stanley and OpenAI, more than 98% of advisor teams now use the Assistant, while accessible documents grew from 20% to 80%. [Morgan Stanley case study](https://openai.com/index/morgan-stanley/)
 
 The important lesson is not the adoption number alone. It is the design behind it: evaluation before deployment, retrieval tuned against expert expectations, and a clear human control point for consequential client communication. In other words, the system did not ask advisors to trust an opaque chatbot. It made trustworthy use the normal way to work.
+
+{{< figure src="/images/illustrations/two-ways-ai-business-value.png" alt="A comparison of Cox FleetMate reducing repair estimates from eight to forty-eight hours to about thirty minutes, and Morgan Stanley reaching over 98 percent advisor-team adoption through expert evaluation and human review" caption="Speed creates capacity; trust and adoption create durable business value." >}}
 
 ## Evaluate the path, then make the path observable
 
