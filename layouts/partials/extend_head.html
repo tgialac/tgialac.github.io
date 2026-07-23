@@ -11,12 +11,25 @@
 {{- end }}
 
 <style>
+.list {
+  background: var(--theme);
+}
+
+.home-info {
+  min-height: 0;
+  padding: 1.5rem 0 2.5rem;
+}
+
+.home-info .entry-header h1 {
+  font-size: 32px;
+  letter-spacing: -0.02em;
+}
+
 .list .post-entry {
-  margin-bottom: 1.5rem;
-  padding: 0 0 1.5rem;
+  margin-bottom: 2.75rem;
+  padding: 0;
   background: transparent;
   border: 0;
-  border-bottom: 1px solid var(--border);
   border-radius: 0;
   transition: none;
 }
@@ -24,7 +37,22 @@
 .list .post-entry:hover,
 .list .post-entry:focus-within {
   transform: none;
-  border-color: var(--border);
+}
+
+.list .entry-header h2 {
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+.list .entry-content {
+  margin: 10px 0;
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-line-clamp: 4;
+}
+
+.list .entry-footer {
+  font-size: 14px;
 }
 
 .list .post-entry:hover .entry-header h2 {

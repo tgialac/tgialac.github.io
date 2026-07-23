@@ -64,11 +64,10 @@ params:
   TocOpen: false
 
   homeInfoParams:
-    Title: "\U0001F44B Welcome to Lac's World"
+    Title: "Welcome to Lac's World"
     Content: >
-      Hi, this is Lac. I write about what I learn,
-      the projects I build, and the interesting things
-      I pick up along the way.
+      Hi, I’m Lac. I write about what I learn, the systems I build,
+      and the ideas worth keeping.
 
   socialIcons:
     - name: github
