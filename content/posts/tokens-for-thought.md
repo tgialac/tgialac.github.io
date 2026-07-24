@@ -42,10 +42,7 @@ $$
 
 This is an invoice, not the provider's physical cost, and certainly not the user's value. A more useful workflow-level account is
 
-$$
-C_{\text{run}} = \sum_{k\in\text{calls}} C_{\text{bill},k}
-+ C_{\text{retrieval}} + C_{\text{tool}} + C_{\text{human}} + C_{\text{failure}}.
-$$
+$$ C_{\text{run}} = \sum_{k\in\text{calls}} C_{\text{bill},k} + C_{\text{retrieval}} + C_{\text{tool}} + C_{\text{human}} + C_{\text{failure}}. $$
 
 The neglected term is usually $C_{\text{failure}}$: rework, a wrongly routed case, a refund, a delayed operation, a bad decision, or lost trust. Once an agent can act, that term can dominate the token bill.
 
@@ -136,10 +133,7 @@ Reasoning models make one old fact vivid: compute can be spent at inference time
 
 Let $b_i$ be the token or compute budget for prompt $i$, and let $V_i(b_i)$ be its expected value after risk. For a cohort budget $B$:
 
-$$
-\max_{b_1,\ldots,b_n}\sum_iV_i(b_i)
-\quad \text{s.t.}\quad \sum_ic_i(b_i)\le B.
-$$
+$$ \max_{b_1,\ldots,b_n}\sum_iV_i(b_i) \quad \text{s.t.}\quad \sum_ic_i(b_i)\le B. $$
 
 At an interior optimum,
 
@@ -278,11 +272,7 @@ Compare vendors using total cost of ownership for the workload distribution, not
 
 A token price hides a physical production system. A simple operational energy and emissions account is
 
-$$
-C_{\text{energy}}=\text{PUE}\cdot e\cdot p_e,
-\qquad
-E_{\text{CO}_2}=\text{PUE}\cdot e\cdot g,
-$$
+$$ C_{\text{energy}}=\text{PUE}\cdot e\cdot p_e, \qquad E_{\text{CO}_2}=\text{PUE}\cdot e\cdot g. $$
 
 where $e$ is IT energy per accepted run, $p_e$ is electricity price, $g$ is grid carbon intensity, and PUE captures facility overhead. This is not a universal per-token formula: workload shape, hardware, batching, utilisation, cooling, and location matter. But it makes the missing variables explicit.
 
