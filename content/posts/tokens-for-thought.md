@@ -173,7 +173,75 @@ RouteLLM learns a router from preference data to select between stronger and wea
 
 Caching has a deeper role than a discount. When prefixes repeat, it avoids recreating KV state. Measure prefix locality, cache-hit rate, tokens avoided, and TTFT saved by workflow and tenant. Retrieval and deterministic tools are also factor substitution: a precise query or calculation may improve grounding while replacing a large amount of generative work. A poor retriever, however, can lower $q$ quickly. Route processing steps, not just models.
 
-## 6. Agent tokenomics: coordination is a real cost
+## 6. The token ledger: capacity, utilisation, and queues
+
+The token count in a provider invoice is only one ledger. A production system needs a second, operational ledger that separates user-visible work from the work required to make that work possible:
+
+$$
+T_{\text{total}} = T_{\text{system}} + T_{\text{user}} + T_{\text{retrieval}} + T_{\text{tool}} + T_{\text{reasoning}} + T_{\text{retry}} - T_{\text{cache-saved}}.
+$$
+
+This decomposition is not just observability hygiene. It identifies the economic lever. If `system` and retrieval context dominate, shrinking the final answer is theatre. If retries dominate, model routing or tool reliability is the problem. If repeated prefixes dominate, cache policy matters more than prompt writing. If hidden reasoning dominates, a visible output-token cap is the wrong control.
+
+The same request has two different costs at a self-hosted provider. Its *incremental* energy cost may be low while GPUs are idle; its *average* cost includes capacity that must be bought and held to satisfy peak traffic and latency commitments. A useful average-cost identity is
+
+$$
+C_{\text{good}} = \frac{C_{\text{accelerator}} + C_{\text{energy}} + C_{\text{network}} + C_{\text{operations}}}{N_{\text{accepted outcomes}}}.
+$$
+
+This is why a team can truthfully observe both “the next token is cheap” and “this product is losing money.” The first statement is close to short-run marginal cost. The second includes idle capacity, redundancy, on-call operations, failed work, and the cost of meeting the tail of the demand distribution.
+
+### The queue is part of the price
+
+LLM products do not run at an average load. They operate near a queue. Little's law gives the compact reminder:
+
+$$
+L = \lambda W,
+$$
+
+where $L$ is the number of jobs in the system, $\lambda$ is arrival rate, and $W$ is time in system. As utilisation approaches capacity, waiting time and tail latency can rise nonlinearly. A policy that looks inexpensive at median traffic can create abandonment, timeout retries, and SLO penalties at peak traffic—turning a token-saving change into a higher CPAO.
+
+The operational consequence is subtle but important: optimise against *traffic segments*, not the average request. Keep at least separate frontiers for interactive chat, long-context analysis, batch work, and high-value action workflows. Their acceptable TTFT, TPOT, cache locality, retry tolerance, and capacity reservation are different. This is also why ORCA, PagedAttention, and DistServe belong in an economics essay: they change the utilisation and queueing terms, not merely an engineering benchmark.
+
+### A token P&L for one workflow
+
+For each workflow, report a small profit-and-loss statement beside the model-quality dashboard:
+
+| Line item | What to measure | What it tells you |
+| --- | --- | --- |
+| Demand | starts, completions, abandonment, retries | Whether low quality or latency is creating hidden volume. |
+| Token mix | token ledger by source and model | Which component is actually consuming compute. |
+| Capacity | utilisation, queue delay, peak-to-average ratio | Whether apparent unit savings survive the SLO. |
+| Outcome | acceptance, downstream correction, escalation | Whether tokens are creating useful work. |
+| Risk | incidents, override rate, expected loss | Whether the cheap path is transferring cost elsewhere. |
+
+This is the minimum accounting required to distinguish efficiency from cost displacement.
+
+## 7. Evaluation is the measurement system of tokenomics
+
+Token optimisation without evaluation is a measurement error masquerading as finance. The goal is not to minimise $T$; it is to estimate the causal change in risk-adjusted outcome value when a system change is made. For a candidate intervention $a$, the decision quantity is
+
+$$
+\Delta \mathbb{E}[V]_a = \mathbb{E}[V\mid a] - \mathbb{E}[V\mid \text{baseline}].
+$$
+
+The intervention can be a shorter context, a cache policy, a different model, a router threshold, an extra verifier, a tool call, or a larger test-time budget. Its score must include acceptance, latency, spend, and loss—not just benchmark accuracy.
+
+A practical experimental design is a **budget ablation curve**. Hold the prompt distribution and rubric fixed; evaluate multiple budgets and routes; then plot quality, CPAO, p95 latency, and escalation rate together. The curve often exposes a knee: early tokens buy grounding and structure, while later tokens mostly buy verbosity, retries, or self-confirmation. The knee is the candidate operating point, not a universal maximum-token setting.
+
+The value of additional information can be written as
+
+$$
+\text{EVI} = \mathbb{E}[V\mid \text{extra evidence or compute}] - \mathbb{E}[V\mid \text{current policy}].
+$$
+
+Spend for another retrieval, sample, tool call, or review only when EVI exceeds the full incremental cost: token spend, latency, tool cost, and any new risk exposure. This turns “should the agent think more?” into a falsifiable operating question.
+
+Evaluation must also be stratified. A single aggregate score can improve while the rare, high-loss cohort collapses. Slice by task difficulty, context length, language, customer tier, tool availability, and action authority. Keep a hidden holdout and review real production traces, because routing and stopping policies are particularly vulnerable to distribution shift.
+
+The strongest organisation-level insight is that evaluation data becomes a capital asset. Each incident can be converted into a labelled failure mode, a regression case, a routing feature, or a policy check. Over time the organisation's advantage is not access to the next cheap model; it is its proprietary map from requests to expected value, risk, and required compute.
+
+## 8. Agent tokenomics: coordination is a real cost
 
 In a single-turn chat, tokens are mainly variable cost. In an agent system, tokens are also messages, state, delegation, and sometimes authority. More agents talking is not evidence of more work being done.
 
@@ -198,7 +266,7 @@ A worker can optimise a local objective—complete a subtask, provide more evide
 
 Without this trace, token optimisation becomes blind trimming: shorten the prompt and lose grounding, cap the answer and create rework, or switch models and damage a rare but expensive cohort.
 
-## 7. Pricing is a screening mechanism, not only a meter
+## 9. Pricing is a screening mechanism, not only a meter
 
 On the provider side, pricing resolves information asymmetry. Users know more than providers about their task mix, desired quality, and willingness to pay. *Menu Pricing of Large Language Models* models heterogeneous task valuations and derives committed-spend contracts in which buyers purchase a budget and allocate it across token classes priced at marginal cost. The paper relates the mechanism to observed token-budget menus, spend commitments, multi-model versioning, and linear API pricing. [Bergemann, Bonatti, and Smolin (2025/2026)](https://arxiv.org/abs/2502.07736)
 
@@ -206,7 +274,7 @@ This explains why the market can support different input/output rates, cached-in
 
 Compare vendors using total cost of ownership for the workload distribution, not a headline price card: context length, cache semantics, SLOs, retries, availability, tool and egress costs, data controls, engineering cost, and switching cost all belong in the economic contract.
 
-## 8. Energy is not an optional footnote
+## 10. Energy is not an optional footnote
 
 A token price hides a physical production system. A simple operational energy and emissions account is
 
@@ -224,7 +292,7 @@ At system scale, the International Energy Agency estimates that data centres con
 
 The tokenomic conclusion is not that every product should report a speculative carbon number. It is that energy, cooling, capacity, and location are production constraints. Long-context, low-value generation is not merely a higher invoice; at scale it consumes scarce infrastructure and creates externalities that the API meter may not price.
 
-## 9. The production frontier and the operating model
+## 11. The production frontier and the operating model
 
 Every configuration—model, quantisation, batch policy, router threshold, context policy, toolchain—can be represented as a point $(C,Q,L,R)$. Any configuration that is more expensive, lower quality, slower, and riskier than another is dominated. The remaining points form a production frontier.
 
@@ -241,7 +309,7 @@ A disciplined operating loop looks like this:
 7. **Set budgets by cohort and authority.** Research may deserve a large token budget but a small action budget. Exhaustion must be observable, not a silent truncation.
 8. **Recompute the frontier.** Prices, models, cache locality, workload mix, and capacity change. Re-run the same quality--cost--latency--risk evaluation on consequential releases.
 
-## 10. Open problems
+## 12. Open problems
 
 1. **Hidden reasoning and actual compute.** API users can see billed tokens, but not necessarily internal routing, speculative work, or all inference compute. Cross-provider comparisons remain opaque.
 2. **Marginal token productivity.** How much does token 1,000 increase success probability on a real task distribution? This needs counterfactual budget experiments, not correlation between length and score.
