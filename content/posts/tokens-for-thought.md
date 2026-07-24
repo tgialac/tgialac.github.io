@@ -247,7 +247,7 @@ $$
 
 Not every topology uses every edge, but the formula captures the coordination tax: delegation, repeated context, debate, checking, repair, and handoff. The survey *Token Economics for LLM Agents* treats tokens as production factors, media of exchange, and units of account, connecting single-agent factor substitution with multi-agent transaction-cost and principal--agent problems. [Chen et al. (2026, survey)](https://arxiv.org/abs/2605.09104)
 
-A worker can optimise a local objective, complete a subtask, provide more evidence, call more tools, while worsening the global one through duplicate work, delay, or context leakage. The unit of control should therefore be a responsible trace, not a chat transcript.
+A worker can complete a locally sensible subtask, provide more evidence, or call more tools, yet still worsen the global objective through duplicate work, delay, or context leakage. The unit of control should therefore be a responsible trace, not a chat transcript.
 
 | Trace field | Question it answers |
 | --- | --- |
@@ -284,7 +284,7 @@ The tokenomic conclusion is not that every product should report a speculative c
 
 ## 11. The production frontier and the operating model
 
-Every configuration, model, quantisation, batch policy, router threshold, context policy, toolchain, can be represented as a point $(C,Q,L,R)$. Any configuration that is more expensive, lower quality, slower, and riskier than another is dominated. The remaining points form a production frontier.
+A configuration combines a model, quantisation, batch policy, router threshold, context policy, and toolchain. It can be represented as a point $(C,Q,L,R)$. Any configuration that is more expensive, lower quality, slower, and riskier than another is dominated. The remaining points form a production frontier.
 
 A recent preprint builds an LLM inference production frontier from WiNEval-3.0 and reports diminishing marginal cost, diminishing returns to scale, and an optimal cost-effectiveness region. [Zhuang et al. (2025, preprint)](https://arxiv.org/abs/2510.26136) Another calls the tension among fine-grained valuation, real-time performance, and allocation optimality the Token Economics Trilemma. [Wu and Deng (2026, preprint)](https://arxiv.org/abs/2605.17410) The practical lesson is sharp: the cost of deciding how to spend tokens belongs inside the objective. A theoretically optimal router that needs the full prompt and half a second to score it may destroy the surplus it promises.
 
@@ -299,7 +299,20 @@ A disciplined operating loop looks like this:
 7. **Set budgets by cohort and authority.** Research may deserve a large token budget but a small action budget. Exhaustion must be observable, not a silent truncation.
 8. **Recompute the frontier.** Prices, models, cache locality, workload mix, and capacity change. Re-run the same quality--cost--latency--risk evaluation on consequential releases.
 
-## 12. Open problems
+## 12. Authority changes the operating policy
+
+Risk is not a generic surcharge. The harm from an answer depends on what the system can do with it, whether the action is reversible, and whether a human has an effective chance to intervene. A credible policy therefore binds a token budget to an **authority budget**: the right to call a tool, alter a record, send an external message, or approve a consequential action is separately capped, logged, and reviewable.
+
+| Workflow state | Economical default | Spend more only when |
+| --- | --- | --- |
+| Draft or analysis | Use a cascade and deterministic checks where possible. | Extra evidence or reasoning changes an acceptance decision. |
+| Read-only retrieval | Ground the answer, expose sources, and keep a bounded retry policy. | Conflicting evidence or low confidence makes another retrieval valuable. |
+| Reversible action | Verify inputs, make the operation idempotent, and retain a rollback path. | The expected reduction in error exceeds the latency and tool cost. |
+| Irreversible or high-impact action | Require policy checks and meaningful human approval. | Additional model compute reduces uncertainty, but it does not substitute for authority controls. |
+
+This is where token economics meets governance. A cheap agent can still be uneconomic if it is allowed to create unbounded downside. NIST's Generative AI Profile is useful as an operating complement: it extends the voluntary AI RMF to generative systems and frames risk management through the lifecycle functions Govern, Map, Measure, and Manage. [NIST AI RMF Generative AI Profile (2024)](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence)
+
+## 13. Open problems
 
 1. **Hidden reasoning and actual compute.** API users can see billed tokens, but not necessarily internal routing, speculative work, or all inference compute. Cross-provider comparisons remain opaque.
 2. **Marginal token productivity.** How much does token 1,000 increase success probability on a real task distribution? This needs counterfactual budget experiments, not correlation between length and score.
@@ -346,7 +359,7 @@ That is the practical meaning of **Tokens for Thought**. Tokens are the meter. T
 - [Ong et al., *RouteLLM*](https://arxiv.org/abs/2406.18665)
 - [Leviathan, Kalman, and Matias, *Fast Inference from Transformers via Speculative Decoding*](https://arxiv.org/abs/2211.17192)
 
-### Serving systems, energy, and agents
+### Serving systems, energy, governance, and agents
 
 - [Kwon et al., *Efficient Memory Management for LLM Serving with PagedAttention*](https://arxiv.org/abs/2309.06180)
 - [Zhong et al., *DistServe* (OSDI 2024)](https://www.usenix.org/system/files/osdi24-zhong-yinmin.pdf)
@@ -356,5 +369,6 @@ That is the practical meaning of **Tokens for Thought**. Tokens are the meter. T
 - [Luccioni, Jernite, and Strubell, *Power Hungry Processing*](https://arxiv.org/abs/2311.16863)
 - [International Energy Agency, *Energy and AI*](https://www.iea.org/reports/energy-and-ai)
 - [Acemoglu, *The Simple Macroeconomics of AI*](https://www.nber.org/papers/w32487)
+- [NIST, *Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile*](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence)
 
 Preprints are useful for framing hypotheses and research questions, but should not be the sole independent evidence behind an investment decision. Reproduce the relevant quality, latency, cost, and risk trade-offs on your own workload before treating a paper result as a deployment decision.
