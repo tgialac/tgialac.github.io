@@ -3,325 +3,300 @@ title: "Tokens for Thought"
 date: 2026-07-24T09:00:00+07:00
 tags: ["ai", "llm", "economics", "inference", "agents", "systems"]
 math: true
-summary: "Token không phải là giá trị. Nó là đồng hồ đo cho một hệ thống biến compute, bộ nhớ, độ trễ, quyền hành động và rủi ro thành một quyết định. AI tokenomics là cách thiết kế đồng hồ đo đó cho đúng."
+summary: "Tokens are not value. They are the meter on a production system that turns computation, memory, latency, authority, and risk into decisions. AI tokenomics is the discipline of designing that meter well."
 ---
 
-> *Token is not the unit of intelligence. It is the meter on an intelligent production system.*
+> *A token is not a unit of intelligence. It is the meter on an intelligent production system.*
 
-Một agent có thể giải được một bài toán khó với giá vài xu. Nó cũng có thể đốt hàng triệu token để viết ra một câu trả lời không ai dùng. Cả hai đều có cùng đơn vị kế toán: token. Nhưng chỉ một trong hai tạo ra giá trị.
+An agent can solve a difficult problem for a few cents. It can also burn millions of tokens producing an answer nobody uses. Both events are recorded in the same unit: tokens. Only one creates value.
 
-Đó là lý do “AI tokenomics” đáng được xem như một ngành thiết kế hệ thống, không chỉ là bảng giá API. Nó hỏi những câu lớn hơn:
+That is why AI tokenomics should be more than an API price sheet. It is the design discipline for deciding where to buy another unit of machine thought, where to stop, and how to make the result economically and operationally defensible.
 
-- Một token thật sự tốn gì để phục vụ—không chỉ giá niêm yết, mà còn GPU, bộ nhớ KV, mạng, năng lượng và công suất dự phòng?
-- Nên bỏ thêm bao nhiêu compute vào *một* câu hỏi trước khi lợi ích biên biến mất?
-- Vì sao một mô hình nhỏ, một router, hay một cache đôi khi có giá trị kinh tế lớn hơn mô hình mạnh nhất?
-- Ai trả tiền cho reasoning ẩn, retry, context phình to và những vòng trao đổi vô ích giữa agents?
-- Khi giá token giảm rất nhanh, lợi thế cạnh tranh chuyển từ “mua token rẻ” sang đâu?
+The central claim of this essay is simple:
 
-Luận điểm của bài này đơn giản:
+> **Tokens are priced production inputs. They create value only when they improve a decision, an action, or a risk outcome by more than they cost.**
 
-> **Token là một đầu vào sản xuất có giá; giá trị của nó chỉ xuất hiện khi token thay đổi một quyết định, một hành động, hoặc một rủi ro theo hướng tốt hơn.**
+A token is closer to a kilowatt-hour than to money. It is a measured consumption unit. Its usefulness depends on the system that turns it into an accepted outcome.
 
-Nói cách khác, token không phải tiền. Token giống kilowatt-giờ hơn: một đơn vị đo tiêu thụ có thể rất rẻ, rất đắt, hoặc hoàn toàn lãng phí tùy hệ thống biến nó thành kết quả.
+## The map: from tokens to value
 
-## Bản đồ: từ token đến giá trị
+A serious LLM request spans at least five layers. An optimisation that ignores one of them is usually a local optimum with a nicer dashboard.
 
-Một lần gọi LLM nằm trên ít nhất năm lớp. Bỏ qua bất kỳ lớp nào sẽ cho ra một “tối ưu” giả.
-
-| Lớp | Câu hỏi kinh tế | Sai lầm thường gặp |
+| Layer | The economic question | The common mistake |
 | --- | --- | --- |
-| **Token** | Bao nhiêu token vào, ra, reasoning và tool context? | Chỉ đếm output hiển thị cho người dùng. |
-| **Hệ thống** | GPU, KV cache, batch, mạng và SLO biến token thành chi phí/độ trễ thế nào? | Đồng nhất token với FLOPs hoặc với latency. |
-| **Mô hình** | Mô hình/cascade nào đạt chất lượng cần thiết với chi phí thấp nhất? | Luôn gọi model mạnh nhất. |
-| **Workflow** | Token ở bước nào thay đổi xác suất thành công của công việc? | Tối ưu cost per request thay vì cost per successful outcome. |
-| **Thị trường & quản trị** | Giá bán, quyền lực định giá, dữ liệu, lock-in, rủi ro và trách nhiệm được phân bổ ra sao? | Coi bảng giá API là chi phí biên thực của nhà cung cấp. |
+| **Tokens** | How many input, output, cached, hidden-reasoning, and tool-context tokens were used? | Counting only visible output. |
+| **Serving system** | How do GPU memory, batching, networking, and SLOs turn tokens into cost and latency? | Treating a token as a fixed quantity of compute or time. |
+| **Model policy** | Which model, route, cache, or verifier achieves the required quality at lowest total cost? | Sending every task to the strongest model. |
+| **Workflow** | Which extra token changes the probability of a successful business outcome? | Minimising cost per request rather than cost per accepted outcome. |
+| **Market and governance** | Who pays, captures surplus, bears risk, and controls access? | Equating API list price with provider marginal cost or user value. |
 
-Khung gần đây của Zhu gọi token là điểm nối giữa information processing, compute, memory, energy, pricing và value; điều đáng giữ lại là cảnh báo trung tâm của nó: chi tiêu token và giá trị kinh tế là hai biến khác nhau, vì giá trị còn phụ thuộc năng suất biên, vị trí trong workflow, reasoning ẩn, rủi ro và hiệu ứng downstream. [Zhu, *AI Tokenomics* (2026)](https://arxiv.org/abs/2606.24616)
+Quanyan Zhu's recent framework is useful precisely because it connects the technical and economic layers: tokens touch information processing, compute, memory, energy, price, allocation, and value. Its most important warning is that token expenditure and economic value are distinct variables; productivity, workflow position, hidden reasoning, risk, and downstream propagation all matter. [Zhu, *AI Tokenomics* (2026)](https://arxiv.org/abs/2606.24616)
 
-Đây cũng là lý do tôi dùng số nhiều: **tokenomics**, không phải token pricing. Giá là tín hiệu thị trường. Economics là bài toán phân bổ nguồn lực khan hiếm để tạo kết quả có giá trị.
+## 1. Do not confuse price, cost, and value
 
-## 1. Đừng nhầm ba con số: price, cost, value
-
-Với một request API, chi phí mà đội sản phẩm nhìn thấy thường là
+For an API user, the visible bill is often approximately
 
 $$
-C_{\text{bill}} = p_{\text{in}}T_{\text{in}} + p_{\text{out}}T_{\text{out}} + p_{\text{cache}}T_{\text{cache}} + C_{\text{tools}},
+C_{\text{bill}} = p_{\text{in}}T_{\text{in}} + p_{\text{out}}T_{\text{out}} + p_{\text{cache}}T_{\text{cache}} + C_{\text{tools}}.
 $$
 
-trong đó $p$ là giá niêm yết theo token và $T$ là lượng token ở từng loại. Đây là **invoice**, không phải cost vật lý của provider, và càng không phải value cho người dùng.
-
-Một accounting hữu ích hơn ở cấp workflow là:
+This is an invoice, not the provider's physical cost, and certainly not the user's value. A more useful workflow-level account is
 
 $$
-C_{\text{run}} = \sum_{k \in \text{calls}} C_{\text{bill},k}
-  + C_{\text{retrieval}} + C_{\text{tool}} + C_{\text{human}} + C_{\text{failure}}.
+C_{\text{run}} = \sum_{k\in\text{calls}} C_{\text{bill},k}
++ C_{\text{retrieval}} + C_{\text{tool}} + C_{\text{human}} + C_{\text{failure}}.
 $$
 
-$C_{\text{failure}}$ là phần hay bị “để ngoài dashboard”: tiền hoàn, thời gian xử lý lại, một ticket bị route sai, sự mất lòng tin, hay tổn thất do một action không nên được thực hiện. Khi agent có quyền hành động, đây thường là hạng mục lớn nhất.
+The neglected term is usually $C_{\text{failure}}$: rework, a wrongly routed case, a refund, a delayed operation, a bad decision, or lost trust. Once an agent can act, that term can dominate the token bill.
 
-Cuối cùng, giá trị kỳ vọng của một run không phải “độ hay của câu trả lời”. Với một quyết định nhị phân đơn giản, hãy viết:
-
-$$
-\mathbb{E}[V] = q\,G - (1-q)\,L - C_{\text{run}},
-$$
-
-trong đó $q$ là xác suất quyết định đúng/được chấp nhận, $G$ là lợi ích nếu đúng, và $L$ là tổn thất nếu sai. Hệ quả đáng nhớ là một token tăng $q$ rất ít vẫn đáng mua trong một workflow có $L$ lớn; ngược lại, một chuỗi reasoning dài có thể vô nghĩa cho tác vụ có $G$ thấp hoặc có thể kiểm tra bằng code.
-
-Đây là nguyên tắc **cost per accepted outcome**:
+For a deliberately simplified binary decision, expected value is
 
 $$
-\text{CPAO} = \frac{C_{\text{total over a cohort}}}{\#\,\text{outcomes accepted / successfully completed}}.
+\mathbb{E}[V] = qG - (1-q)L - C_{\text{run}},
 $$
 
-CPAO không thay thế metric chất lượng, nhưng ép chúng ta gắn chi phí với kết quả. “<span>$</span>0.002/request” không nói gì nếu 30% request phải làm lại; “<span>$</span>2/case” có thể rất tốt nếu nó tránh một lỗi trị giá <span>$</span>2,000.
+where $q$ is the probability that the decision is correct or accepted, $G$ is the gain when it is right, and $L$ is the loss when it is wrong. An extra token that changes $q$ by a small amount can be rational for a high-loss decision; a long reasoning trace can be wasteful for a low-value task that software can verify deterministically.
 
-### Giá API đang rơi, nhưng không đồng đều
-
-Giá đạt một mức năng lực nhất định đã giảm rất nhanh. Epoch AI, khi ghép API pricing với benchmark milestones, ước tính giá để đạt hiệu năng GPT‑4 trên GPQA Diamond đã giảm khoảng **40× mỗi năm**; giữa các benchmark/mốc năng lực, tốc độ giảm dao động **9× đến 900×/năm**. Chính Epoch cũng cảnh báo phần giảm nhanh nhất xảy ra gần đây nên chưa chắc bền vững. [Epoch AI (2025)](https://epoch.ai/data-insights/llm-inference-price-trends)
-
-Điều này không có nghĩa “AI sẽ miễn phí”. Nó có nghĩa **biên frontier dịch chuyển**. Một preprint 2026 tìm thấy khoảng 600× giảm giá token trong dữ liệu 2020–2026, nhưng đồng thời thấy flagship/reasoning pricing không khớp một đường exponential đơn giản; tác giả diễn giải đó là *reasoning premium*. Đây là bằng chứng gợi ý, không phải định luật thị trường đã được xác nhận độc lập. [Du, *Tiered Super-Moore’s Law* (2026, preprint)](https://arxiv.org/abs/2603.28576)
-
-Kết luận quản trị không phải là khóa một forecast giá. Đó là thiết kế sao cho economics vẫn tốt khi (a) giá giảm, (b) mix model thay đổi, và (c) người dùng tăng nhu cầu vì token rẻ hơn—hiệu ứng Jevons phiên bản AI.
-
-## 2. Token không có “một” chi phí kỹ thuật
-
-Transformer serving có hai pha rất khác nhau.
-
-- **Prefill** đọc prompt và tạo KV cache. Với attention đầy đủ, công việc attention tăng gần bậc hai theo độ dài context $S$ trong pha này.
-- **Decode** sinh từng token. Mỗi token mới attention vào cache dài $S$, nên chi phí mỗi bước tăng theo context đã tích lũy; tốc độ decode thường bị memory-bandwidth-bound hơn là FLOP-bound.
-
-Một gần đúng hữu ích cho bộ nhớ KV cache là:
+This motivates a production metric that is harder to game:
 
 $$
-M_{\text{KV}} \approx 2\,L\,S\,H_{\text{KV}}\,d_h\,b \quad \text{bytes},
+\text{CPAO} = \frac{C_{\text{total over a cohort}}}{\#\,\text{accepted or successfully completed outcomes}}.
 $$
 
-với $L$ là số layer, $S$ độ dài sequence, $H_{\text{KV}}$ số KV heads, $d_h$ head dimension, $b$ số byte mỗi phần tử, và hệ số 2 cho key và value. Chi tiết kiến trúc, quantization và sharing thay đổi hệ số, nhưng insight không đổi: **context dài là một khoản nợ bộ nhớ sống cùng request**.
+Cost per accepted outcome does not replace quality metrics. It makes them economically accountable. A very cheap request is not cheap if one in three outputs must be redone. A costly case may be excellent if it prevents a much larger loss.
 
-Vì thế, “giá/token” không đủ để nói về serving economics. Hai workload có cùng tổng token có thể có TTFT, throughput, GPU occupancy và chi phí khác hẳn nhau nếu một workload là prompt dài + output ngắn, còn workload kia là chat nhiều lượt + decode dài.
-Erdil formalizes đúng trade-off này ở cấp deployment: tại một cost/token cho trước, serial generation speed bị ràng buộc đồng thời bởi arithmetic, memory bandwidth, network bandwidth, latency, batch size và parallelism; vì vậy thực tế là một Pareto frontier speed–cost, không phải một hệ số quy đổi token cố định. [Erdil, *Inference economics of language models* (2025)](https://arxiv.org/abs/2506.04645)
+### Prices are falling, but not uniformly
 
-PagedAttention/vLLM minh họa tại sao hệ thống có thể thay đổi economics mà không đổi model: nó quản lý KV cache như virtual memory theo block, giảm fragmentation và cho phép sharing cache; paper báo cáo throughput cao hơn **2–4×** ở cùng latency so với các hệ thống nền tảng được so sánh, rõ hơn với sequence dài và decode phức tạp. [Kwon et al., *PagedAttention* (2023)](https://arxiv.org/abs/2309.06180)
+The frontier has moved fast. Epoch AI estimates that the price needed to achieve GPT-4-level performance on GPQA Diamond fell by roughly 40-fold per year in its historical comparison; across benchmarks and milestones, its estimates range from 9-fold to 900-fold annually. The authors explicitly warn that the fastest recent declines may not persist. [Epoch AI (2025)](https://epoch.ai/data-insights/llm-inference-price-trends)
 
-Tương tự, DistServe tách prefill và decode sang nhóm GPU khác nhau vì hai pha gây nhiễu và có ràng buộc latency khác nhau: **time to first token (TTFT)** cho prefill, **time per output token (TPOT)** cho decode. Trên các workload đánh giá, hệ thống báo cáo tới 7.4× nhiều requests hơn hoặc SLO chặt hơn 12.6×. [Zhong et al., *DistServe* (OSDI 2024)](https://www.usenix.org/system/files/osdi24-zhong-yinmin.pdf)
+That does not mean AI becomes free. It means the frontier moves and demand may expand in response. A 2026 preprint estimates roughly a 600-fold decline in token prices from 2020 to 2026, while finding that flagship reasoning services do not fit a simple exponential trend. Treat this as a useful hypothesis about market segmentation, not a settled law. [Du, *Tiered Super-Moore's Law* (2026, preprint)](https://arxiv.org/abs/2603.28576)
 
-### Goodput, không phải token throughput
+The strategic implication is not to lock in a price forecast. It is to build a system that remains healthy when models, prices, and demand distributions change.
 
-Throughput có thể tăng bằng batching, nhưng user không mua “tokens/second của cluster”. User mua một phản hồi kịp thời. Vì vậy metric vận hành nên là:
+## 2. A token does not have one technical cost
 
-$$
-\text{Goodput} = \#\{\text{requests hoàn thành đúng chất lượng và SLO}\}/\text{time}.
-$$
+Transformer serving has two distinct phases.
 
-Một job sinh 20,000 token mà timeout trước khi người dùng nhận được không tạo goodput. Một router giảm cost 50% nhưng làm tăng tail latency vượt SLA cũng có thể phá economics. Tối ưu thật là một bài toán frontier, không một scalar:
+- **Prefill** reads the prompt and constructs the key-value cache. With full attention, attention work grows roughly quadratically with context length during this phase.
+- **Decode** generates one token at a time. Each new token attends over accumulated context, so the cost of a decoding step grows with sequence length and is often limited by memory bandwidth rather than raw FLOPs.
 
-$$
-\min \; C \quad \text{s.t.}\quad Q \ge Q^*,\; \text{TTFT}_{p95}\le \tau_1,\; \text{TPOT}_{p95}\le \tau_2,\; R\le R^*.
-$$
-
-$Q$ là quality/acceptance, $R$ là risk. Nếu chưa có các constraint này, một cost dashboard chỉ đang tối ưu thứ dễ đo.
-
-## 3. Token ở train-time, token ở inference-time, và “số lần nó được dùng”
-
-Chinchilla thay đổi trực giác train-time: dưới một compute budget cố định, kích thước model và số training tokens nên cùng scale; các model lớn trước đó bị undertrained. [Hoffmann et al. (2022)](https://arxiv.org/abs/2203.15556) Nhưng Chinchilla-optimal không tự động là *deployment-optimal*.
-
-Nếu một model được suy luận $N$ lần, chi phí vòng đời tối giản là:
+A useful approximation for KV-cache memory is
 
 $$
-C_{\text{lifecycle}}(\theta) = C_{\text{train}}(\theta) + N\, C_{\text{infer}}(\theta),
+M_{\text{KV}} \approx 2LSH_{\text{KV}}d_hb \quad \text{bytes},
 $$
 
-và bài toán thực là chọn kiến trúc/training sao cho quality đạt mục tiêu với tổng chi phí nhỏ nhất. Khi $N$ lớn, một model nhỏ hơn nhưng train lâu hơn có thể thắng vì inference lặp lại rất nhiều lần. Sardana et al. mở rộng scaling laws theo hướng này và kết luận rằng với demand suy luận cỡ một tỷ requests, model nên **nhỏ hơn và train lâu hơn** Chinchilla-optimal; thí nghiệm của họ cũng thấy quality tiếp tục tăng ở vùng tokens-per-parameter cực cao. [*Beyond Chinchilla-Optimal* (2024/2025)](https://arxiv.org/abs/2401.00448)
+where $L$ is the number of layers, $S$ is sequence length, $H_{\text{KV}}$ is the number of KV heads, $d_h$ is head dimension, and $b$ is bytes per element. Architecture, quantisation, and sharing change the coefficient, but not the conclusion: **long context is live memory debt for the duration of a request.**
 
-Đây là một bài học chiến lược: model training không chỉ sản xuất “capability”; nó sản xuất một **đường chi phí biên cho mọi request tương lai**. Đó là lý do demand forecast, latency target, context distribution và cache hit rate phải có mặt sớm trong quyết định model—not appear later in a FinOps spreadsheet.
+Two workloads with the same token total can therefore have radically different cost, time-to-first-token (TTFT), time-per-output-token (TPOT), and GPU occupancy. A long prompt with a short answer is not economically equivalent to a multi-turn chat with a long decode.
 
-## 4. Test-time compute: khi nào một suy nghĩ nữa đáng giá?
+PagedAttention made this concrete by treating KV cache like paged virtual memory, reducing fragmentation and enabling sharing. Its vLLM evaluation reported 2--4 times higher throughput at comparable latency than the systems it compared against, with larger gains for longer sequences and more complex decoding. [Kwon et al., *PagedAttention* (2023)](https://arxiv.org/abs/2309.06180)
 
-Reasoning models làm rõ một sự thật cũ: compute có thể được dồn vào lúc inference thay vì đóng gói toàn bộ vào weights. Nhưng *nhiều thinking hơn* không phải một policy.
+DistServe separates prefill from decode because colocating them creates interference and couples resource-allocation choices that have different latency objectives. Its evaluation reported up to 7.4 times more requests served or 12.6 times tighter latency SLOs under the evaluated workloads. [Zhong et al., *DistServe* (OSDI 2024)](https://www.usenix.org/system/files/osdi24-zhong-yinmin.pdf)
 
-Gọi $b_i$ là budget token/compute dành cho prompt $i$, còn $V_i(b_i)$ là giá trị kỳ vọng sau khi đã trừ failure risk. Với ngân sách cohort $B$, bài toán lý tưởng là:
+Ege Erdil formalises the broader point: at a given cost per token, serial generation speed is jointly constrained by arithmetic, memory bandwidth, network bandwidth, latency, batch size, and parallelism. Deployment produces a speed--cost Pareto frontier, not a fixed conversion rate from tokens to money. [Erdil, *Inference economics of language models* (2025)](https://arxiv.org/abs/2506.04645)
+
+### Software changes the frontier too
+
+The token bill is not the only lever. ORCA introduced iteration-level scheduling and selective batching for generative serving; on its GPT-3 175B evaluation it reported 36.9 times the throughput of FasterTransformer at comparable latency. The number is workload-specific, but the economic lesson is general: scheduling can convert the same model and same hardware into a different cost--latency frontier. [Yu et al., *ORCA* (OSDI 2022)](https://www.usenix.org/conference/osdi22/presentation/yu)
+
+Speculative decoding makes the same point from another direction. A small draft model proposes several tokens; the large target model verifies them in parallel, preserving the target distribution. Leviathan, Kalman, and Matias reported a 2--3 times speedup on T5-XXL without retraining or changing outputs. [*Fast Inference from Transformers via Speculative Decoding* (2023)](https://arxiv.org/abs/2211.17192) This is why a list price or a benchmark score never fully specifies deployment economics.
+
+### Goodput, not token throughput
+
+Users do not buy cluster tokens per second. They buy a usable response on time. The operative metric is
 
 $$
-\max_{b_1,\ldots,b_n} \sum_i V_i(b_i)
-\quad\text{s.t.}\quad \sum_i c_i(b_i) \le B.
+\text{Goodput} = \#\{\text{requests that meet quality and SLO}\}/\text{time}.
 $$
 
-Ở nghiệm nội suy, điều kiện kinh tế học rất đơn giản:
+A job that generates twenty thousand tokens and times out creates no goodput. A router that halves spend but pushes p95 latency beyond an SLA can destroy value. The correct decision is constrained optimisation:
+
+$$
+\min C \quad \text{s.t.}\quad Q\ge Q^*,\; \text{TTFT}_{p95}\le\tau_1,\; \text{TPOT}_{p95}\le\tau_2,\; R\le R^*.
+$$
+
+## 3. Training tokens, inference tokens, and volume
+
+Chinchilla altered training intuition: under a fixed compute budget, model size and training-token count should scale together, and many earlier large models were undertrained. [Hoffmann et al., *Training Compute-Optimal Large Language Models* (2022)](https://arxiv.org/abs/2203.15556) But training-optimal is not deployment-optimal.
+
+If a model is invoked $N$ times, a simplified lifecycle objective is
+
+$$
+C_{\text{lifecycle}}(\theta)=C_{\text{train}}(\theta)+N\,C_{\text{infer}}(\theta).
+$$
+
+At large $N$, a smaller model trained longer can beat a larger, Chinchilla-optimal model because inference repeats. Sardana et al. extend scaling laws to include inference demand and find that at roughly one billion requests, a smaller, longer-trained model can be optimal; their experiments also show continued quality gains at very high tokens-per-parameter ratios. [*Beyond Chinchilla-Optimal* (2024/2025)](https://arxiv.org/abs/2401.00448)
+
+Training does not merely create capability. It creates the marginal cost curve for every future request. Demand forecasts, context distributions, latency targets, and cache locality therefore belong in model decisions from the beginning, not in a later FinOps spreadsheet.
+
+## 4. Test-time compute: when is another thought worth buying?
+
+Reasoning models make one old fact vivid: compute can be spent at inference time rather than entirely embedded in model weights. But “more thinking” is not a policy.
+
+Let $b_i$ be the token or compute budget for prompt $i$, and let $V_i(b_i)$ be its expected value after risk. For a cohort budget $B$:
+
+$$
+\max_{b_1,\ldots,b_n}\sum_iV_i(b_i)
+\quad \text{s.t.}\quad \sum_ic_i(b_i)\le B.
+$$
+
+At an interior optimum,
 
 $$
 \frac{\partial V_i/\partial b_i}{\partial c_i/\partial b_i}=\lambda.
 $$
 
-Hãy chi token tiếp cho prompt nào có **marginal value per marginal cost** cao hơn shadow price $\lambda$ của ngân sách. Prompt dễ nên dừng sớm. Prompt khó nhưng giá trị cao có thể warrant search, tool use hay verifier. Prompt khó nhưng lợi ích thấp nên escalate hoặc từ chối, không phải “think forever”.
+Allocate the next unit of compute to the request with the highest marginal value per marginal cost until it falls to the shadow price $\lambda$. Easy prompts should stop early. Difficult, high-value prompts may justify search, tools, or a verifier. Difficult but low-value prompts should often abstain or escalate rather than think indefinitely.
 
-Đây chính là động cơ sau test-time scaling có điều kiện. Snell et al. cho thấy hiệu quả của các cách scale test-time compute phụ thuộc mạnh vào độ khó prompt, và một allocation thích nghi theo prompt có thể hiệu quả hơn best-of-$N$ hơn 4× trong setting của họ. [*Scaling LLM Test-Time Compute Optimally* (2024)](https://arxiv.org/abs/2408.03314)
+Snell et al. show why this must be prompt-conditional: the effectiveness of test-time scaling methods varies strongly with prompt difficulty. In their setting, adaptive compute allocation was more than four times as efficient as best-of-$N$. [*Scaling LLM Test-Time Compute Optimally* (2024)](https://arxiv.org/abs/2408.03314)
 
-Vấn đề production là ta không biết trước $V_i$ và difficulty thật. Tín hiệu như entropy, self-consistency, verifier score, tool-result disagreement, hay một router score chỉ là proxy và cần calibration theo task.
+The production problem is that $V_i$ and difficulty are unobserved. Entropy, self-consistency, verifier scores, tool-result disagreement, and router scores are proxies. They require calibration on the actual task distribution.
 
-### Overthinking và underthinking là cùng một lỗi phân bổ
+Fixed reasoning caps fail in two directions. *Plan and Budget* names them overthinking on simple problems and underthinking on hard ones; it introduces a Budget Allocation Model and E3, a correctness--efficiency metric. [Lin et al. (2025/2026)](https://arxiv.org/abs/2505.16122)
 
-“Cắt reasoning xuống 1,000 tokens” nghe tiết kiệm, nhưng là một fixed budget bất chấp heterogeneity. *Plan and Budget* gọi ra hai failure modes đối ngẫu: **overthinking** ở câu hỏi đơn giản và **underthinking** ở câu khó. Paper đề xuất Budget Allocation Model (BAM) và metric E3 để đánh đổi correctness với compute efficiency. [Lin et al. (2025/2026)](https://arxiv.org/abs/2505.16122)
+A practical stopping policy does not need to inspect private chain-of-thought. It can stop or escalate when marginal expected value falls below cost plus latency penalty; deterministic or grounded checks pass; samples disagree persistently; or a token, tool, or action budget is reached. A budget is a conditional spending right, not an arbitrary `max_tokens` value.
 
-Một stopping rule thực dụng không cần “đọc chain-of-thought”. Nó chỉ cần telemetry: dừng hoặc route sang human khi một trong các điều kiện sau đúng.
+## 5. Routing, cascades, caching, and substitution
 
-- Giá trị dự kiến của lượt compute tiếp theo thấp hơn chi phí + latency penalty.
-- Verifier/grounded checks đạt ngưỡng và answer đã đủ để hành động.
-- Nhiều samples/retries bất đồng, tức uncertainty không được giải bởi thêm sampling.
-- Budget, quyền tool, hoặc blast radius bị chạm.
-
-Đây là biến tokens thành policy: **một budget là một quyền chi tiêu có điều kiện**, không phải một `max_tokens` tùy ý.
-
-## 5. Router, cascade, và cache: ba đòn bẩy kinh tế mạnh nhất
-
-Không phải request nào cũng xứng đáng với cùng một model. Về mặt thống kê, một router nên chọn action $a \in \{\text{small}, \text{large}, \text{retrieve}, \text{human}\}$ để tối đa hóa utility điều kiện theo request $x$:
+Not every request deserves the same model. A router should choose among a small model, large model, retrieval, deterministic code, or human review according to conditional utility:
 
 $$
-a^*(x)=\arg\max_a\; \mathbb{E}[V\mid x,a]-C(a)-\rho\,R(x,a).
+a^*(x)=\arg\max_a\;\mathbb{E}[V\mid x,a]-C(a)-\rho R(x,a).
 $$
 
-$\rho$ là giá của risk theo use case. Một agent định giá lại giao dịch không nên dùng cùng policy với chatbot nội bộ, dù cost/token giống nhau.
+The risk price $\rho$ differs by use case. A trading, medical, or payment workflow should not share a routing policy with an internal chat assistant merely because both consume text tokens.
 
-**Cascade** là implementation đơn giản: thử lựa chọn rẻ trước; chỉ escalate khi confidence/verifier không đạt. FrugalGPT kết hợp prompt adaptation, approximation và cascade; trong benchmark của họ, cascade có thể match model tốt nhất với giảm chi phí tới 98%, hoặc tăng accuracy 4% ở cùng cost. Đây là kết quả thực nghiệm trong task/model của paper, không phải bảo chứng cho mọi production workload. [Chen, Zaharia & Zou (2023)](https://arxiv.org/abs/2305.05176)
+A **cascade** is the simple implementation: try a cheaper option, then escalate only when a calibrated confidence or verifier threshold fails. FrugalGPT combines prompt adaptation, approximation, and cascades; in its evaluated tasks it matched the strongest individual model with up to 98% lower cost, or improved accuracy at the same cost. That is a result for its setting, not a production guarantee. [Chen, Zaharia, and Zou (2023)](https://arxiv.org/abs/2305.05176)
 
-RouteLLM học router từ preference data để chọn giữa model mạnh và yếu; paper báo cáo giảm chi phí hơn 2× ở một số benchmark mà không giảm chất lượng. [Ong et al. (2024/2025)](https://arxiv.org/abs/2406.18665) Một router tốt tạo *selection value*; một router không calibrated chỉ thêm một điểm hỏng và một lớp latency.
+RouteLLM learns a router from preference data to select between stronger and weaker models, reporting more than twofold cost reductions in some benchmarks without a quality loss. [Ong et al. (2024/2025)](https://arxiv.org/abs/2406.18665) A well-calibrated router creates selection value; an uncalibrated router adds another failure point and another latency stage.
 
-**Cache** còn sâu hơn: nếu prompt prefix lặp lại, cache không “giảm giá token” mà tránh *sản xuất lại* KV state. Nó có economic value khi workload có locality. Đo cache hit rate, prefix length saved và TTFT saved theo tenant/workflow; đừng suy ra hiệu quả chỉ từ traffic trung bình.
+Caching has a deeper role than a discount. When prefixes repeat, it avoids recreating KV state. Measure prefix locality, cache-hit rate, tokens avoided, and TTFT saved by workflow and tenant. Retrieval and deterministic tools are also factor substitution: a precise query or calculation may improve grounding while replacing a large amount of generative work. A poor retriever, however, can lower $q$ quickly. Route processing steps, not just models.
 
-**Retrieval và tool calls** là factor substitution. Thay vì để model tái diễn giải 50k token, một query có provenance hoặc phép tính deterministic có thể tăng $q$ đồng thời giảm $T$. Nhưng retrieval kém có thể hạ $q$ rất nhanh. Do đó, router phải route cả **bước xử lý**, không chỉ model.
+## 6. Agent tokenomics: coordination is a real cost
 
-## 6. Agent tokenomics: lời hứa lớn, externality lớn
+In a single-turn chat, tokens are mainly variable cost. In an agent system, tokens are also messages, state, delegation, and sometimes authority. More agents talking is not evidence of more work being done.
 
-Trong single-turn chat, token chủ yếu là chi phí variable. Trong agent, token còn là message, trạng thái, điều phối và đôi khi là quyền lực. Một agent “nói chuyện với nhau” nhiều không nhất thiết làm việc tốt hơn.
-
-Với $m$ agents, số kênh giao tiếp tiềm năng có thể tăng bậc hai:
+With $m$ agents, the number of possible communication channels grows as
 
 $$
-E_{\text{possible}} = \frac{m(m-1)}{2}.
+E_{\text{possible}}=\frac{m(m-1)}{2}.
 $$
 
-Không phải mọi topology chạm giới hạn đó, nhưng công thức nhắc ta rằng multi-agent có **coordination tax**: tokens để phân công, lặp context, tranh luận, kiểm tra, sửa nhau và handoff. Survey *Token Economics for LLM Agents* đặt đúng vấn đề bằng ba vai trò của token—factor sản xuất, medium trao đổi và unit of account—và dùng lăng kính micro/meso/macro để nối factor substitution, transaction cost và principal–agent problems. [Chen et al. (2026, survey)](https://arxiv.org/abs/2605.09104)
+Not every topology uses every edge, but the formula captures the coordination tax: delegation, repeated context, debate, checking, repair, and handoff. The survey *Token Economics for LLM Agents* treats tokens as production factors, media of exchange, and units of account, connecting single-agent factor substitution with multi-agent transaction-cost and principal--agent problems. [Chen et al. (2026, survey)](https://arxiv.org/abs/2605.09104)
 
-Một worker agent có thể tối ưu local reward (hoàn thành subtask, dùng nhiều evidence) nhưng làm hại global objective (trễ deadline, duplicate research, leak context). Đây là principal–agent problem theo nghĩa rất thực tế, không phải ẩn dụ kinh tế học.
+A worker can optimise a local objective—complete a subtask, provide more evidence, call more tools—while worsening the global one through duplicate work, delay, or context leakage. The unit of control should therefore be a responsible trace, not a chat transcript.
 
-### Đơn vị đúng là “trace có trách nhiệm”
-
-Mỗi run agent nên phát ra một trace accounting tối thiểu:
-
-| Trường | Dùng để trả lời |
+| Trace field | Question it answers |
 | --- | --- |
-| `workflow`, `task_class`, `tenant`, `policy_version` | Ai/việc gì sinh chi phí, dưới rule nào? |
-| input/output/reasoning/cache token (nếu provider công bố) | Token đi đâu? |
-| model, route, prompt version, retrieval/tool calls | Quyết định nào sinh token và quality? |
-| TTFT, TPOT, end-to-end latency, retries | Độ trễ đến từ đâu? |
-| verifier/acceptance/human intervention | Nó có tạo outcome đúng không? |
-| action, reversibility, approvals, incident link | Chi phí/rủi ro downstream là gì? |
+| workflow, task class, tenant, policy version | Who incurred spend, and under which rule? |
+| input, output, reasoning, and cached tokens when available | Where did tokens go? |
+| model, route, prompt version, retrieval, and tools | Which decisions changed cost and quality? |
+| TTFT, TPOT, end-to-end latency, retries | Where did time go? |
+| verifier result, acceptance, human intervention | Did it create a successful outcome? |
+| action, approval, reversibility, incident link | What downstream risk did it create? |
 
-Không có trace này, “token optimization” rất dễ trở thành cắt bừa: giảm prompt nhưng mất grounding; giới hạn output nhưng tăng rework; đổi model nhưng làm yếu một cohort hiếm mà đắt.
+Without this trace, token optimisation becomes blind trimming: shorten the prompt and lose grounding, cap the answer and create rework, or switch models and damage a rare but expensive cohort.
 
-## 7. Pricing: token budget là cơ chế screening, không chỉ là meter
+## 7. Pricing is a screening mechanism, not only a meter
 
-Từ phía provider, token pricing giải một bài toán information asymmetry. User biết tốt hơn provider họ có task nào, cần chất lượng nào và willingness-to-pay nào. *Menu Pricing of Large Language Models* mô hình hóa user có valuation khác nhau trên continuum tasks; với technology đồng nhất, type đa chiều có thể được tóm về scalar index. Kết quả cơ chế tối ưu của paper có dạng committed-spend contracts: buyer mua budget rồi phân bổ qua token classes theo marginal cost; paper liên hệ điều này với token-budget menus, maximum/minimum spend plans, versioning nhiều model và linear API pricing. [Bergemann, Bonatti & Smolin (2025/2026)](https://arxiv.org/abs/2502.07736)
+On the provider side, pricing resolves information asymmetry. Users know more than providers about their task mix, desired quality, and willingness to pay. *Menu Pricing of Large Language Models* models heterogeneous task valuations and derives committed-spend contracts in which buyers purchase a budget and allocate it across token classes priced at marginal cost. The paper relates the mechanism to observed token-budget menus, spend commitments, multi-model versioning, and linear API pricing. [Bergemann, Bonatti, and Smolin (2025/2026)](https://arxiv.org/abs/2502.07736)
 
-Đọc thực tế, điều đó giải thích vì sao thị trường có nhiều hình thức cùng tồn tại:
+This explains why the market can support different input/output rates, cached-input discounts, batch and priority lanes, subscriptions, credits, committed use, reasoning tiers, and open-weight alternatives. None is naturally more neutral. Each partitions surplus, transfers demand risk, and changes incentives for routing and caching.
 
-- input/output prices khác nhau;
-- cached input rẻ hơn;
-- batch/priority lanes;
-- subscription, committed use, credits;
-- model tiers và reasoning tiers;
-- open-weight/self-hosting như outside option.
+Compare vendors using total cost of ownership for the workload distribution, not a headline price card: context length, cache semantics, SLOs, retries, availability, tool and egress costs, data controls, engineering cost, and switching cost all belong in the economic contract.
 
-Không hình thức nào “tự nhiên” công bằng hơn. Mỗi hình thức chọn một cách chia surplus, chuyển rủi ro demand, và tạo incentive cho routing/caching. Khi so sánh vendor, hãy so sánh **TCO cho workload distribution**, không chỉ price card: context length, cache semantics, latency SLO, retries, egress/tools, availability, data controls, engineering cost và switching cost đều nằm trong hợp đồng kinh tế thật.
+## 8. Energy is not an optional footnote
 
-## 8. Production frontier: điểm tối ưu không phải model tốt nhất
+A token price hides a physical production system. A simple operational energy and emissions account is
 
-Có thể hình dung mỗi cấu hình $j$—model, quantization, batch policy, router threshold, context policy, toolchain—là một điểm $(C_j,Q_j,L_j,R_j)$. Những điểm bị điểm khác vừa rẻ hơn, tốt hơn, nhanh hơn và an toàn hơn thì bị **dominated**. Phần còn lại là production frontier.
+$$
+C_{\text{energy}}=\text{PUE}\cdot e\cdot p_e,
+\qquad
+E_{\text{CO}_2}=\text{PUE}\cdot e\cdot g,
+$$
 
-Một preprint gần đây xây “LLM Inference Production Frontier” trên dữ liệu WiNEval-3.0 và báo cáo diminishing marginal cost, diminishing returns to scale và một vùng cost-effectiveness tối ưu. [Zhuang et al. (2025, preprint)](https://arxiv.org/abs/2510.26136) Đóng góp quan trọng hơn con số cụ thể là cách đặt câu hỏi: benchmark accuracy đơn lẻ không thể chọn deployment.
+where $e$ is IT energy per accepted run, $p_e$ is electricity price, $g$ is grid carbon intensity, and PUE captures facility overhead. This is not a universal per-token formula: workload shape, hardware, batching, utilisation, cooling, and location matter. But it makes the missing variables explicit.
 
-Một framework khác gọi trade-off giữa granularity của valuation, real-time performance và allocation optimality là **Token Economics Trilemma**. Có thể đo giá trị cực chi tiết cho từng token, nhưng chính việc đo/route đó tốn latency và compute; có thể quyết định ngay, nhưng phải dùng rule thô; có thể tối ưu toàn cục, nhưng không đủ thời gian online. [Wu & Deng (2026, preprint)](https://arxiv.org/abs/2605.17410)
+Luccioni, Jernite, and Strubell measure energy and carbon for 1,000 inferences across task-specific and general-purpose systems. They find that generative, multi-purpose architectures can be orders of magnitude more energy intensive than task-specific systems, even after controlling for parameter count. Task structure and output length matter materially. [*Power Hungry Processing* (2023)](https://arxiv.org/abs/2311.16863)
 
-Tôi thấy đây là một trong những insight thực dụng nhất: một router “tối ưu” mà mất 500 ms hoặc cần full prompt để chấm điểm có thể phá chính surplus nó muốn tạo. **Chi phí quyết định cách tiêu token phải nằm trong hàm mục tiêu.**
+At system scale, the International Energy Agency estimates that data centres consumed about 415 TWh in 2024, around 1.5% of global electricity demand, and projects around 945 TWh by 2030 in its base case. It also notes that demand is geographically concentrated, so local grid integration can be difficult even when the global share appears modest. [IEA, *Energy and AI* (2025)](https://www.iea.org/reports/energy-and-ai/energy-demand-from-ai)
 
-## 9. Một operating model: tối ưu value, không tối ưu token
+The tokenomic conclusion is not that every product should report a speculative carbon number. It is that energy, cooling, capacity, and location are production constraints. Long-context, low-value generation is not merely a higher invoice; at scale it consumes scarce infrastructure and creates externalities that the API meter may not price.
 
-Đây là playbook tôi sẽ dùng để vận hành AI tokenomics trong một product team.
+## 9. The production frontier and the operating model
 
-### Bước 1 — Viết utility contract cho từng workflow
+Every configuration—model, quantisation, batch policy, router threshold, context policy, toolchain—can be represented as a point $(C,Q,L,R)$. Any configuration that is more expensive, lower quality, slower, and riskier than another is dominated. The remaining points form a production frontier.
 
-Không bắt đầu bằng `max_tokens`. Viết: user nào, action/quyết định nào, $G$ là gì, $L$ là gì, latency nào còn hữu ích, trường hợp nào phải human-review. Đặt hard constraints cho privacy, authorization, budget và irreversibility.
+A recent preprint builds an LLM inference production frontier from WiNEval-3.0 and reports diminishing marginal cost, diminishing returns to scale, and an optimal cost-effectiveness region. [Zhuang et al. (2025, preprint)](https://arxiv.org/abs/2510.26136) Another calls the tension among fine-grained valuation, real-time performance, and allocation optimality the Token Economics Trilemma. [Wu and Deng (2026, preprint)](https://arxiv.org/abs/2605.17410) The practical lesson is sharp: the cost of deciding how to spend tokens belongs inside the objective. A theoretically optimal router that needs the full prompt and half a second to score it may destroy the surplus it promises.
 
-### Bước 2 — Phân loại demand trước khi chọn model
+A disciplined operating loop looks like this:
 
-Phân biệt task dễ/khó, online/offline, prompt dài/ngắn, high/low risk, repeat/novel, cacheable/non-cacheable. Average request là một hư cấu nguy hiểm. Pricing và latency đều có tail.
+1. **Write a utility contract.** Name the user, decision, upside, downside, useful latency, and human-review boundary.
+2. **Segment demand before selecting a model.** Separate easy and hard, online and offline, long and short context, repeated and novel, low- and high-risk work.
+3. **Build the smallest credible baseline.** A single model plus deterministic validation is usually a better baseline than a premature agent swarm.
+4. **Measure CPAO and traces.** Capture quality, acceptance, end-to-end latency, cost, retries, policy decisions, and incidents.
+5. **Change one lever at a time.** Evaluate context pruning, retrieval, cache policy, routing, verifier, and test-time budget separately against a stable holdout.
+6. **Route by expected utility, with abstention.** “Escalate” is a valid action; model preference alone is not a cost-of-error policy.
+7. **Set budgets by cohort and authority.** Research may deserve a large token budget but a small action budget. Exhaustion must be observable, not a silent truncation.
+8. **Recompute the frontier.** Prices, models, cache locality, workload mix, and capacity change. Re-run the same quality--cost--latency--risk evaluation on consequential releases.
 
-### Bước 3 — Lập đường cơ sở đơn giản và đo CPAO
+## 10. Open problems
 
-Một model + prompt + deterministic validations thường là baseline tốt hơn một swarm agents. Đo acceptance, end-to-end latency, cost/run, CPAO và failure modes trên holdout thật.
+1. **Hidden reasoning and actual compute.** API users can see billed tokens, but not necessarily internal routing, speculative work, or all inference compute. Cross-provider comparisons remain opaque.
+2. **Marginal token productivity.** How much does token 1,000 increase success probability on a real task distribution? This needs counterfactual budget experiments, not correlation between length and score.
+3. **Calibration for routing and stopping.** Model confidence is not a calibrated probability. Routers must be tested under distribution shift, model replacement, and rare high-loss cases.
+4. **Value attribution in agent traces.** After twelve tool calls and four agents, which token, tool, or human checkpoint created the gain? Credit assignment determines whether optimisation helps or harms.
+5. **SLO-aware economic scheduling.** Online allocation must balance tenant fairness, tail latency, energy, batch efficiency, and value density. Neither highest-value-first nor shortest-job-first is universally correct.
+6. **Security and privacy externalities.** Context can carry personal data, proprietary information, prompt-injection payloads, stale policy, and secrets. Its cost is not linear in token price.
+7. **Market design and interoperability.** Commitments, menus, open weights, prompt and trace portability, and switching costs will determine who captures surplus as inference commoditises.
+8. **Energy- and location-aware allocation.** The same service can face different energy prices, grid intensity, cooling efficiency, and capacity constraints by time and location.
+9. **Benchmark-to-business transfer.** A benchmark delta rarely identifies a delta in expected business value. Evaluations need acceptance, abstention, latency, and cost-of-error, not only exact match.
 
-### Bước 4 — Tách các đòn bẩy
+## The macroeconomic guardrail
 
-Thử riêng từng thay đổi: context pruning, structured output, retrieval, caching, model routing, verifier, test-time budget. Nếu thay đổi năm thứ cùng lúc, bạn không biết gain đến từ đâu và không thể giữ nó khi traffic distribution đổi.
+A local token saving is not automatically an economic productivity gain. Acemoglu's task-based analysis makes the right warning explicit: if AI's microeconomic effects operate through task-level cost savings, aggregate productivity depends on the fraction of tasks actually affected and the magnitude of those verified savings. [Acemoglu, *The Simple Macroeconomics of AI* (2024)](https://www.nber.org/papers/w32487)
 
-### Bước 5 — Route theo expected utility, có abstention
+This is a useful guardrail for AI tokenomics. Do not multiply a lower API bill by every employee, every process, or the entire economy. First establish adoption, task coverage, quality-adjusted time saving, complementarity with human work, and the cost of the controls required to use the system safely.
 
-Cho phép “I don’t know / escalate” là một action hợp lệ. Training/evaluating router theo model preference mà không có cost-of-error sẽ route sai ở các task quan trọng nhất.
+## Conclusion: cheaper tokens do not remove the need to think
 
-### Bước 6 — Đặt budget theo cohort và theo quyền hành động
+As tokens become cheaper, the question changes from “can we afford AI?” to “where should we buy another unit of thought?”
 
-Budget theo user, tenant, workflow, run và tool. Một agent có thể có token budget lớn cho research offline nhưng action budget rất nhỏ khi chạm hệ thống production. Budget exhaustion phải là một event observable, không phải một silent truncation.
+The answer is rarely “everywhere.” Buy compute where it changes the probability of a valuable outcome. Use systems design so that repeated context is not paid for twice. Use routing so routine work does not receive flagship treatment. Use evaluation to discover whether extra reasoning helps. Use governance so that a cheap request cannot turn into an expensive mistake.
 
-### Bước 7 — Recompute frontier theo thời gian
+That is the practical meaning of **Tokens for Thought**. Tokens are the meter. The work is to build a system that knows when to run the meter, when to stop it, and how to ensure that every additional tick creates more value than risk.
 
-Vendor đổi giá, model đổi behavior, cache locality thay đổi, demand drift. Mỗi release quan trọng phải chạy lại quality–cost–latency–risk frontier trên cùng holdout; không dùng benchmark marketing để thay thế evaluation của workload mình.
+## Sources and further reading
 
-## 10. Những open problems đáng theo dõi
+### Token economics, pricing, and production frontiers
 
-Không thiếu framework; thứ còn thiếu là measurement và causal evidence.
-
-1. **Đo hidden reasoning và compute thật.** API user có thể thấy billable tokens nhưng không thấy toàn bộ compute, speculative decoding, routing nội bộ hay reasoning policy. So sánh cost-effectiveness giữa provider vì vậy thiếu transparency.
-2. **Đo marginal token productivity.** Token thứ 1,000 có tăng xác suất thành công bao nhiêu cho *task distribution* thật? Cần experiments có counterfactual budgets, không chỉ correlation giữa token length và score.
-3. **Calibration cho routing và stopping.** Confidence của model không phải probability đã calibration. Một router cần được đánh giá trên shift, rare/high-loss cases và thay đổi model phía sau.
-4. **Value attribution trong agent traces.** Khi outcome tốt sau 12 tool calls và 4 agents, token nào, tool nào, hay human checkpoint nào tạo gain? Credit assignment quyết định tối ưu sai hay đúng.
-5. **Externalities của context và multi-agent communication.** Token có thể mang PII, IP, prompt-injection payload, policy text hoặc stale facts. Chi phí privacy/security không tỷ lệ tuyến tính với price/token.
-6. **SLO-aware economic scheduling.** Bài toán online phải cân fairness giữa tenants, tail latency, energy, batch efficiency và value density. “Đắt nhất trước” hay “shortest job first” đều có thể sai.
-7. **Market design và interoperability.** Menu pricing, committed spend, open-weight alternatives, portability của prompts/traces và switching cost sẽ định hình ai giữ surplus khi inference commoditizes.
-8. **Energy và location-aware economics.** Token price bỏ qua carbon intensity, water, grid constraint và opportunity cost của GPU. Giá rẻ có thể đẩy demand đến nơi externality cao hơn.
-9. **Benchmark-to-business transfer.** Một $\Delta$ trên benchmark hiếm khi cho biết $\Delta\mathbb{E}[V]$ trong workflow. Ta cần benchmarks có acceptance, abstention, latency và cost-of-error, không chỉ exact-match.
-
-## Kết: token rẻ không giải phóng chúng ta khỏi việc nghĩ
-
-Khi một token rẻ đi, câu hỏi không còn là “có đủ budget để dùng AI không?” mà là “ta nên mua thêm suy nghĩ ở đâu?”
-
-Câu trả lời tốt hiếm khi là “mọi nơi”. Nó là: mua compute ở điểm mà nó tăng xác suất một outcome có giá trị; dùng system design để không trả hai lần cho cùng context; dùng routing để không trả flagship price cho việc routine; dùng evaluation để biết suy nghĩ thêm có thực sự giúp; và dùng governance để không biến một request rẻ thành một lỗi đắt.
-
-Đó là ý nghĩa thực tế nhất của **Tokens for Thought**. Token là đồng hồ. Công việc của chúng ta là xây một cỗ máy biết khi nào nên chạy đồng hồ, khi nào nên dừng, và làm sao mỗi nhịp đếm tạo thêm giá trị hơn rủi ro.
-
-## Nguồn và ghi chú đọc thêm
-
-### Kinh tế học, giá và production frontiers
-
-- [Bergemann, Bonatti & Smolin — *Menu Pricing of Large Language Models*](https://arxiv.org/abs/2502.07736)
+- [Bergemann, Bonatti, and Smolin — *Menu Pricing of Large Language Models*](https://arxiv.org/abs/2502.07736)
 - [Zhu — *AI Tokenomics: The Economics of Tokens, Computation, and Pricing in Foundation Models*](https://arxiv.org/abs/2606.24616)
 - [Epoch AI — *LLM inference prices have fallen rapidly but unequally across tasks*](https://epoch.ai/data-insights/llm-inference-price-trends)
-- [Du — *Tiered Super-Moore’s Law*](https://arxiv.org/abs/2603.28576) *(preprint)*
+- [Du — *Tiered Super-Moore's Law*](https://arxiv.org/abs/2603.28576) *(preprint)*
 - [Zhuang et al. — *Beyond Benchmarks: The Economics of AI Inference*](https://arxiv.org/abs/2510.26136) *(preprint)*
-- [Wu & Deng — *Computational Challenges in Token Economics*](https://arxiv.org/abs/2605.17410) *(preprint)*
+- [Wu and Deng — *Computational Challenges in Token Economics*](https://arxiv.org/abs/2605.17410) *(preprint)*
 
-### Scaling, routing và test-time compute
+### Scaling, routing, and test-time compute
 
 - [Hoffmann et al. — *Training Compute-Optimal Large Language Models*](https://arxiv.org/abs/2203.15556)
 - [Sardana et al. — *Beyond Chinchilla-Optimal*](https://arxiv.org/abs/2401.00448)
 - [Snell et al. — *Scaling LLM Test-Time Compute Optimally*](https://arxiv.org/abs/2408.03314)
 - [Lin et al. — *Plan and Budget*](https://arxiv.org/abs/2505.16122)
-- [Chen, Zaharia & Zou — *FrugalGPT*](https://arxiv.org/abs/2305.05176)
+- [Chen, Zaharia, and Zou — *FrugalGPT*](https://arxiv.org/abs/2305.05176)
 - [Ong et al. — *RouteLLM*](https://arxiv.org/abs/2406.18665)
+- [Leviathan, Kalman, and Matias — *Fast Inference from Transformers via Speculative Decoding*](https://arxiv.org/abs/2211.17192)
 
-### Hệ thống và agents
+### Serving systems, energy, and agents
 
 - [Kwon et al. — *Efficient Memory Management for LLM Serving with PagedAttention*](https://arxiv.org/abs/2309.06180)
 - [Zhong et al. — *DistServe* (OSDI 2024)](https://www.usenix.org/system/files/osdi24-zhong-yinmin.pdf)
+- [Yu et al. — *ORCA* (OSDI 2022)](https://www.usenix.org/conference/osdi22/presentation/yu)
 - [Erdil — *Inference economics of language models*](https://arxiv.org/abs/2506.04645)
 - [Chen et al. — *Token Economics for LLM Agents*](https://arxiv.org/abs/2605.09104) *(survey/preprint)*
+- [Luccioni, Jernite, and Strubell — *Power Hungry Processing*](https://arxiv.org/abs/2311.16863)
+- [International Energy Agency — *Energy and AI*](https://www.iea.org/reports/energy-and-ai)
+- [Acemoglu — *The Simple Macroeconomics of AI*](https://www.nber.org/papers/w32487)
 
-Các paper đánh dấu *preprint* hữu ích để định hình câu hỏi và giả thuyết, nhưng không nên được dùng như bằng chứng độc lập duy nhất cho quyết định đầu tư. Với một production decision, hãy tái tạo trade-off trên workload, traffic và risk profile của chính mình.
+Preprints are useful for framing hypotheses and research questions, but should not be the sole independent evidence behind an investment decision. Reproduce the relevant quality, latency, cost, and risk trade-offs on your own workload before treating a paper result as a deployment decision.
