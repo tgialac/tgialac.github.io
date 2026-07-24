@@ -57,7 +57,7 @@ where $q$ is the probability that the decision is correct or accepted, $G$ is th
 This motivates a production metric that is harder to game:
 
 $$
-\text{CPAO} = \frac{C_{\text{total over a cohort}}}{\#\,\text{accepted or successfully completed outcomes}}.
+\text{CPAO} = \frac{C_{\text{total over a cohort}}}{\text{accepted or successfully completed outcomes}}.
 $$
 
 Cost per accepted outcome does not replace quality metrics. It makes them economically accountable. A very cheap request is not cheap if one in three outputs must be redone. A costly case may be excellent if it prevents a much larger loss.
@@ -104,13 +104,13 @@ Speculative decoding makes the same point from another direction. A small draft 
 Users do not buy cluster tokens per second. They buy a usable response on time. The operative metric is
 
 $$
-\text{Goodput} = \#\{\text{requests that meet quality and SLO}\}/\text{time}.
+\text{Goodput} = \frac{\text{requests that meet quality and SLO}}{\text{time}}.
 $$
 
 A job that generates twenty thousand tokens and times out creates no goodput. A router that halves spend but pushes p95 latency beyond an SLA can destroy value. The correct decision is constrained optimisation:
 
 $$
-\min C \quad \text{s.t.}\quad Q\ge Q^*,\; \text{TTFT}_{p95}\le\tau_1,\; \text{TPOT}_{p95}\le\tau_2,\; R\le R^*.
+\min C \quad \text{s.t.}\quad Q\ge Q^{\star}, \quad \text{TTFT}\_{p95}\le\tau_1, \quad \text{TPOT}\_{p95}\le\tau_2, \quad R\le R^{\star}.
 $$
 
 ## 3. Training tokens, inference tokens, and volume
@@ -120,7 +120,7 @@ Chinchilla altered training intuition: under a fixed compute budget, model size 
 If a model is invoked $N$ times, a simplified lifecycle objective is
 
 $$
-C_{\text{lifecycle}}(\theta)=C_{\text{train}}(\theta)+N\,C_{\text{infer}}(\theta).
+C_{\text{lifecycle}}(\theta)=C_{\text{train}}(\theta)+N C_{\text{infer}}(\theta).
 $$
 
 At large $N$, a smaller model trained longer can beat a larger, Chinchilla-optimal model because inference repeats. Sardana et al. extend scaling laws to include inference demand and find that at roughly one billion requests, a smaller, longer-trained model can be optimal; their experiments also show continued quality gains at very high tokens-per-parameter ratios. [*Beyond Chinchilla-Optimal* (2024/2025)](https://arxiv.org/abs/2401.00448)
@@ -156,7 +156,7 @@ A practical stopping policy does not need to inspect private chain-of-thought. I
 Not every request deserves the same model. A router should choose among a small model, large model, retrieval, deterministic code, or human review according to conditional utility:
 
 $$
-a^*(x)=\arg\max_a\;\mathbb{E}[V\mid x,a]-C(a)-\rho R(x,a).
+a^{\star}(x)=\arg\max_a\quad\mathbb{E}[V\mid x,a]-C(a)-\rho R(x,a).
 $$
 
 The risk price $\rho$ differs by use case. A trading, medical, or payment workflow should not share a routing policy with an internal chat assistant merely because both consume text tokens.
@@ -193,7 +193,7 @@ $$
 L = \lambda W,
 $$
 
-where $L$ is the number of jobs in the system, $\lambda$ is arrival rate, and $W$ is time in system. As utilisation approaches capacity, waiting time and tail latency can rise nonlinearly. A policy that looks inexpensive at median traffic can create abandonment, timeout retries, and SLO penalties at peak traffic—turning a token-saving change into a higher CPAO.
+where $L$ is the number of jobs in the system, $\lambda$ is arrival rate, and $W$ is time in system. As utilisation approaches capacity, waiting time and tail latency can rise nonlinearly. A policy that looks inexpensive at median traffic can create abandonment, timeout retries, and SLO penalties at peak traffic, turning a token-saving change into a higher CPAO.
 
 The operational consequence is subtle but important: optimise against *traffic segments*, not the average request. Keep at least separate frontiers for interactive chat, long-context analysis, batch work, and high-value action workflows. Their acceptable TTFT, TPOT, cache locality, retry tolerance, and capacity reservation are different. This is also why ORCA, PagedAttention, and DistServe belong in an economics essay: they change the utilisation and queueing terms, not merely an engineering benchmark.
 
@@ -219,7 +219,7 @@ $$
 \Delta \mathbb{E}[V]_a = \mathbb{E}[V\mid a] - \mathbb{E}[V\mid \text{baseline}].
 $$
 
-The intervention can be a shorter context, a cache policy, a different model, a router threshold, an extra verifier, a tool call, or a larger test-time budget. Its score must include acceptance, latency, spend, and loss—not just benchmark accuracy.
+The intervention can be a shorter context, a cache policy, a different model, a router threshold, an extra verifier, a tool call, or a larger test-time budget. Its score must include acceptance, latency, spend, and loss, not just benchmark accuracy.
 
 A practical experimental design is a **budget ablation curve**. Hold the prompt distribution and rubric fixed; evaluate multiple budgets and routes; then plot quality, CPAO, p95 latency, and escalation rate together. The curve often exposes a knee: early tokens buy grounding and structure, while later tokens mostly buy verbosity, retries, or self-confirmation. The knee is the candidate operating point, not a universal maximum-token setting.
 
@@ -247,7 +247,7 @@ $$
 
 Not every topology uses every edge, but the formula captures the coordination tax: delegation, repeated context, debate, checking, repair, and handoff. The survey *Token Economics for LLM Agents* treats tokens as production factors, media of exchange, and units of account, connecting single-agent factor substitution with multi-agent transaction-cost and principal--agent problems. [Chen et al. (2026, survey)](https://arxiv.org/abs/2605.09104)
 
-A worker can optimise a local objective—complete a subtask, provide more evidence, call more tools—while worsening the global one through duplicate work, delay, or context leakage. The unit of control should therefore be a responsible trace, not a chat transcript.
+A worker can optimise a local objective, complete a subtask, provide more evidence, call more tools, while worsening the global one through duplicate work, delay, or context leakage. The unit of control should therefore be a responsible trace, not a chat transcript.
 
 | Trace field | Question it answers |
 | --- | --- |
@@ -284,7 +284,7 @@ The tokenomic conclusion is not that every product should report a speculative c
 
 ## 11. The production frontier and the operating model
 
-Every configuration—model, quantisation, batch policy, router threshold, context policy, toolchain—can be represented as a point $(C,Q,L,R)$. Any configuration that is more expensive, lower quality, slower, and riskier than another is dominated. The remaining points form a production frontier.
+Every configuration, model, quantisation, batch policy, router threshold, context policy, toolchain, can be represented as a point $(C,Q,L,R)$. Any configuration that is more expensive, lower quality, slower, and riskier than another is dominated. The remaining points form a production frontier.
 
 A recent preprint builds an LLM inference production frontier from WiNEval-3.0 and reports diminishing marginal cost, diminishing returns to scale, and an optimal cost-effectiveness region. [Zhuang et al. (2025, preprint)](https://arxiv.org/abs/2510.26136) Another calls the tension among fine-grained valuation, real-time performance, and allocation optimality the Token Economics Trilemma. [Wu and Deng (2026, preprint)](https://arxiv.org/abs/2605.17410) The practical lesson is sharp: the cost of deciding how to spend tokens belongs inside the objective. A theoretically optimal router that needs the full prompt and half a second to score it may destroy the surplus it promises.
 
@@ -329,32 +329,32 @@ That is the practical meaning of **Tokens for Thought**. Tokens are the meter. T
 
 ### Token economics, pricing, and production frontiers
 
-- [Bergemann, Bonatti, and Smolin — *Menu Pricing of Large Language Models*](https://arxiv.org/abs/2502.07736)
-- [Zhu — *AI Tokenomics: The Economics of Tokens, Computation, and Pricing in Foundation Models*](https://arxiv.org/abs/2606.24616)
-- [Epoch AI — *LLM inference prices have fallen rapidly but unequally across tasks*](https://epoch.ai/data-insights/llm-inference-price-trends)
-- [Du — *Tiered Super-Moore's Law*](https://arxiv.org/abs/2603.28576) *(preprint)*
-- [Zhuang et al. — *Beyond Benchmarks: The Economics of AI Inference*](https://arxiv.org/abs/2510.26136) *(preprint)*
-- [Wu and Deng — *Computational Challenges in Token Economics*](https://arxiv.org/abs/2605.17410) *(preprint)*
+- [Bergemann, Bonatti, and Smolin, *Menu Pricing of Large Language Models*](https://arxiv.org/abs/2502.07736)
+- [Zhu, *AI Tokenomics: The Economics of Tokens, Computation, and Pricing in Foundation Models*](https://arxiv.org/abs/2606.24616)
+- [Epoch AI, *LLM inference prices have fallen rapidly but unequally across tasks*](https://epoch.ai/data-insights/llm-inference-price-trends)
+- [Du, *Tiered Super-Moore's Law*](https://arxiv.org/abs/2603.28576) *(preprint)*
+- [Zhuang et al., *Beyond Benchmarks: The Economics of AI Inference*](https://arxiv.org/abs/2510.26136) *(preprint)*
+- [Wu and Deng, *Computational Challenges in Token Economics*](https://arxiv.org/abs/2605.17410) *(preprint)*
 
 ### Scaling, routing, and test-time compute
 
-- [Hoffmann et al. — *Training Compute-Optimal Large Language Models*](https://arxiv.org/abs/2203.15556)
-- [Sardana et al. — *Beyond Chinchilla-Optimal*](https://arxiv.org/abs/2401.00448)
-- [Snell et al. — *Scaling LLM Test-Time Compute Optimally*](https://arxiv.org/abs/2408.03314)
-- [Lin et al. — *Plan and Budget*](https://arxiv.org/abs/2505.16122)
-- [Chen, Zaharia, and Zou — *FrugalGPT*](https://arxiv.org/abs/2305.05176)
-- [Ong et al. — *RouteLLM*](https://arxiv.org/abs/2406.18665)
-- [Leviathan, Kalman, and Matias — *Fast Inference from Transformers via Speculative Decoding*](https://arxiv.org/abs/2211.17192)
+- [Hoffmann et al., *Training Compute-Optimal Large Language Models*](https://arxiv.org/abs/2203.15556)
+- [Sardana et al., *Beyond Chinchilla-Optimal*](https://arxiv.org/abs/2401.00448)
+- [Snell et al., *Scaling LLM Test-Time Compute Optimally*](https://arxiv.org/abs/2408.03314)
+- [Lin et al., *Plan and Budget*](https://arxiv.org/abs/2505.16122)
+- [Chen, Zaharia, and Zou, *FrugalGPT*](https://arxiv.org/abs/2305.05176)
+- [Ong et al., *RouteLLM*](https://arxiv.org/abs/2406.18665)
+- [Leviathan, Kalman, and Matias, *Fast Inference from Transformers via Speculative Decoding*](https://arxiv.org/abs/2211.17192)
 
 ### Serving systems, energy, and agents
 
-- [Kwon et al. — *Efficient Memory Management for LLM Serving with PagedAttention*](https://arxiv.org/abs/2309.06180)
-- [Zhong et al. — *DistServe* (OSDI 2024)](https://www.usenix.org/system/files/osdi24-zhong-yinmin.pdf)
-- [Yu et al. — *ORCA* (OSDI 2022)](https://www.usenix.org/conference/osdi22/presentation/yu)
-- [Erdil — *Inference economics of language models*](https://arxiv.org/abs/2506.04645)
-- [Chen et al. — *Token Economics for LLM Agents*](https://arxiv.org/abs/2605.09104) *(survey/preprint)*
-- [Luccioni, Jernite, and Strubell — *Power Hungry Processing*](https://arxiv.org/abs/2311.16863)
-- [International Energy Agency — *Energy and AI*](https://www.iea.org/reports/energy-and-ai)
-- [Acemoglu — *The Simple Macroeconomics of AI*](https://www.nber.org/papers/w32487)
+- [Kwon et al., *Efficient Memory Management for LLM Serving with PagedAttention*](https://arxiv.org/abs/2309.06180)
+- [Zhong et al., *DistServe* (OSDI 2024)](https://www.usenix.org/system/files/osdi24-zhong-yinmin.pdf)
+- [Yu et al., *ORCA* (OSDI 2022)](https://www.usenix.org/conference/osdi22/presentation/yu)
+- [Erdil, *Inference economics of language models*](https://arxiv.org/abs/2506.04645)
+- [Chen et al., *Token Economics for LLM Agents*](https://arxiv.org/abs/2605.09104) *(survey/preprint)*
+- [Luccioni, Jernite, and Strubell, *Power Hungry Processing*](https://arxiv.org/abs/2311.16863)
+- [International Energy Agency, *Energy and AI*](https://www.iea.org/reports/energy-and-ai)
+- [Acemoglu, *The Simple Macroeconomics of AI*](https://www.nber.org/papers/w32487)
 
 Preprints are useful for framing hypotheses and research questions, but should not be the sole independent evidence behind an investment decision. Reproduce the relevant quality, latency, cost, and risk trade-offs on your own workload before treating a paper result as a deployment decision.
