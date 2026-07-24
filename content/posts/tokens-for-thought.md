@@ -213,6 +213,32 @@ For each workflow, report a small profit-and-loss statement beside the model-qua
 
 This is the minimum accounting required to distinguish efficiency from cost displacement.
 
+### Build, buy, or reserve capacity
+
+The self-hosting question is often asked as if it were a comparison between an API list price and the electricity required for one more token. That comparison is wrong in both directions. An API purchase includes elasticity, capacity risk, model updates, and operations the buyer does not operate. Owning capacity includes accelerators, redundancy, depreciation or reservation commitments, platform engineering, observability, and the cost of idle headroom.
+
+For a stable workload, write the comparison explicitly:
+
+$$
+C_{\text{API}}(N) = Nc_{\text{API}}, \qquad C_{\text{own}}(N) = F_{\text{capacity}} + Nc_{\text{variable}} + C_{\text{overhead}}.
+$$
+
+If the API's all-in variable cost exceeds the owned system's all-in variable cost, a simplified break-even volume is
+
+$$
+N^{\star} = \frac{F_{\text{capacity}} + C_{\text{overhead}}}{c_{\text{API}} - c_{\text{variable}}}.
+$$
+
+This is a planning threshold, not a procurement answer. It only holds for the demand, model, latency target, and reliability policy used to estimate it. A workload with sharp peaks can cross $N^{\star}$ on average yet remain a bad self-hosting candidate because the required capacity sits idle most of the day. Conversely, a predictable, high-utilisation baseline may justify reserved or owned capacity even if bursts continue to use an API.
+
+| Demand and control condition | Default economic posture | What can reverse it |
+| --- | --- | --- |
+| Volatile demand, frontier capability, or uncertain product fit | Buy elastic API capacity. | Sustained utilisation, stable workload shape, or a strong data/control requirement. |
+| Predictable baseline plus occasional peaks | Reserve the baseline; burst externally. | A tighter SLO or a demand forecast that makes external bursts material. |
+| High and steady volume on a compatible model | Evaluate owned or long-term reserved capacity. | Idle headroom, operations burden, model churn, or a better external quality--cost frontier. |
+
+The right comparison is therefore **portfolio allocation**, not ideology. Keep the option value of an external frontier model for novel or difficult work; use a cheaper, more controllable path only where its measured quality, latency, and risk meet the utility contract.
+
 ## 7. Evaluation is the measurement system of tokenomics
 
 Token optimisation without evaluation is a measurement error masquerading as finance. The goal is not to minimise $T$; it is to estimate the causal change in risk-adjusted outcome value when a system change is made. For a candidate intervention $a$, the decision quantity is
@@ -236,6 +262,40 @@ Spend for another retrieval, sample, tool call, or review only when EVI exceeds 
 Evaluation must also be stratified. A single aggregate score can improve while the rare, high-loss cohort collapses. Slice by task difficulty, context length, language, customer tier, tool availability, and action authority. Keep a hidden holdout and review real production traces, because routing and stopping policies are particularly vulnerable to distribution shift.
 
 The strongest organisation-level insight is that evaluation data becomes a capital asset. Each incident can be converted into a labelled failure mode, a regression case, a routing feature, or a policy check. Over time the organisation's advantage is not access to the next cheap model; it is its proprietary map from requests to expected value, risk, and required compute.
+
+### A worked operating case: optimise accepted outcomes, not requests
+
+Consider an illustrative support workflow with 1,000 attempts. An accepted outcome means that the issue passes the policy check and does not trigger a downstream correction within seven days. The figures below are deliberately illustrative: they show the accounting method, not a claim about any vendor's price or model quality.
+
+| Policy | CPAO (all-in cost / accepted outcomes) | p95 latency |
+| --- | ---: | ---: |
+| Flagship model plus retrieval | USD 0.55 (USD 509 / 920) | 4.1 s |
+| Cascade with 22% escalation | USD 0.22 (USD 205 / 930) | 5.4 s |
+
+The cascade is worth adopting only if 5.4 seconds remains inside the workflow's SLO. Its lower API bill is not the whole explanation: it also reduces corrections and failures. Conversely, if escalation lifted p95 above a customer-abandonment threshold, its lower CPAO could be a false saving.
+
+The operating decision should also survive plausible changes in the workload. A compact sensitivity table prevents one forecast from becoming a policy:
+
+| Scenario | CPAO (all-in cost / accepted outcomes) | Operating response |
+| --- | ---: | --- |
+| Baseline | USD 0.22 (USD 205 / 930) | Operate inside the 6 s p95 SLO. |
+| Retrieved context doubles | USD 0.25 (USD 231 / 930) | Improve retrieval compression or cache locality before shrinking answers. |
+| Escalation rises to 35% | USD 0.23 (USD 218 / 938) | Extra compute is justified only if the higher acceptance rate holds. |
+| Failure rate doubles | USD 0.33 (USD 295 / 900) | Stop cost optimisation; investigate grounding, verification, or tool reliability. |
+
+This is the discipline behind a token budget. Instrument the denominator, declare the correction window and acceptance rule, then rerun the table by task cohort. A lower token count is a win only when the accepted-outcome denominator and risk boundary hold.
+
+### Real deployments: three measurements worth copying
+
+Published deployments rarely reveal enough token-level detail to calculate a comparable CPAO. They can still show which outcome metric made the system useful. Treat vendor and customer-reported figures as deployment evidence, not as universal causal estimates.
+
+**Klarna: resolution, not chat volume.** In its first month, Klarna reported 2.3 million conversations, two-thirds of its service chats, satisfaction on par with human agents, a 25% fall in repeat enquiries, and resolution in under two minutes versus eleven minutes before. It estimated USD 40 million of 2024 profit improvement. [Klarna case study](https://openai.com/index/klarna/) The transferable lesson is to count resolution and repeat contact, not merely automated conversations. The economic unit is a resolved customer need.
+
+**Morgan Stanley: trust controls are productive inputs.** Morgan Stanley reports that more than 98% of wealth-management advisor teams use its AI tools daily. It pairs retrieval with use-case-specific evals, daily regression testing, human review of drafted client follow-ups, and policy controls. [Morgan Stanley case study](https://openai.com/index/morgan-stanley/) In a high-authority workflow, evaluation and review are part of the production function, not overhead to be optimised away.
+
+**GitHub Copilot: use a counterfactual.** In a controlled study of 95 professional developers completing the same JavaScript task, the Copilot group completed the task 55% faster and had a higher completion rate (78% versus 70%). [GitHub's study](https://github.blog/news-insights/research/research-quantifying-github-copilots-impact-on-developer-productivity-and-happiness/) The task is narrow, but the measurement principle is general: define a verifiable task and a baseline, then measure quality and elapsed time together.
+
+The cases are intentionally different. Klarna highlights downstream resolution, Morgan Stanley shows the cost of trust controls, and the GitHub experiment supplies a counterfactual. None licenses a universal ROI claim. Together they show why a token ledger needs an outcome measure, a safety boundary, and a baseline.
 
 ## 8. Agent tokenomics: coordination is a real cost
 
@@ -372,5 +432,11 @@ That is the practical meaning of **Tokens for Thought**. Tokens are the meter. T
 - [International Energy Agency, *Energy and AI*](https://www.iea.org/reports/energy-and-ai)
 - [Acemoglu, *The Simple Macroeconomics of AI*](https://www.nber.org/papers/w32487)
 - [NIST, *Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile*](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence)
+
+### Deployed case studies and measured productivity
+
+- [Klarna, *AI assistant does the work of 700 full-time agents*](https://openai.com/index/klarna/) *(company-reported deployment results)*
+- [Morgan Stanley, *Uses AI evals to shape the future of financial services*](https://openai.com/index/morgan-stanley/) *(company-reported deployment results)*
+- [GitHub, *Quantifying GitHub Copilot's impact on developer productivity and happiness*](https://github.blog/news-insights/research/research-quantifying-github-copilots-impact-on-developer-productivity-and-happiness/) *(controlled study; task-specific)*
 
 Preprints are useful for framing hypotheses and research questions, but should not be the sole independent evidence behind an investment decision. Reproduce the relevant quality, latency, cost, and risk trade-offs on your own workload before treating a paper result as a deployment decision.
