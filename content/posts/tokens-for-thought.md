@@ -143,7 +143,6 @@ $$
 $$
 
 Allocate the next unit of compute to the request with the highest marginal value per marginal cost until it falls to the shadow price $\lambda$. Easy prompts should stop early. Difficult, high-value prompts may justify search, tools, or a verifier. Difficult but low-value prompts should often abstain or escalate rather than think indefinitely.
-{{< token_frontier >}}
 
 
 Snell et al. show why this must be prompt-conditional: the effectiveness of test-time scaling methods varies strongly with prompt difficulty. In their setting, adaptive compute allocation was more than four times as efficient as best-of-$N$. [*Scaling LLM Test-Time Compute Optimally* (2024)](https://arxiv.org/abs/2408.03314)
