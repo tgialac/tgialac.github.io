@@ -29,7 +29,6 @@ A serious LLM request spans at least five layers. An optimisation that ignores o
 | **Model policy** | Which model, route, cache, or verifier achieves the required quality at lowest total cost? | Sending every task to the strongest model. |
 | **Workflow** | Which extra token changes the probability of a successful business outcome? | Minimising cost per request rather than cost per accepted outcome. |
 | **Market and governance** | Who pays, captures surplus, bears risk, and controls access? | Equating API list price with provider marginal cost or user value. |
-{{< token_value_map >}}
 
 
 Quanyan Zhu's recent framework is useful precisely because it connects the technical and economic layers: tokens touch information processing, compute, memory, energy, price, allocation, and value. Its most important warning is that token expenditure and economic value are distinct variables; productivity, workflow position, hidden reasoning, risk, and downstream propagation all matter. [Zhu, *AI Tokenomics* (2026)](https://arxiv.org/abs/2606.24616)

@@ -1,15 +1,18 @@
 <figure class="token-figure token-frontier-figure">
-  <svg viewBox="0 0 720 520" role="img" aria-labelledby="token-frontier-title token-frontier-desc">
-    <title id="token-frontier-title">The marginal value of another token</title>
-    <desc id="token-frontier-desc">A concave expected-value curve and a linear full-cost line show where extra compute is worthwhile and where a system should stop or escalate.</desc>
-    <rect x="20" y="20" width="680" height="480" rx="28" class="token-figure-surface" />
-    <text x="58" y="72" class="token-figure-kicker">THE OPERATING DECISION</text>
-    <text x="58" y="108" class="token-figure-title">The case for another token</text>
-    <path d="M102 422 H642 M102 422 V146" class="frontier-axis" />
-    <text x="630" y="454" text-anchor="end" class="frontier-axis-label">compute spend</text><text x="78" y="154" transform="rotate(-90 78 154)" class="frontier-axis-label">outcome value</text>
-    <path d="M108 398 C168 302 240 238 314 204 C394 167 472 154 632 150" class="frontier-value" /><path d="M108 408 L632 184" class="frontier-cost" /><path d="M420 422 V173" class="frontier-threshold" /><circle cx="420" cy="186" r="8" class="frontier-stop-dot" />
-    <text x="434" y="177" class="frontier-stop-label">stop or escalate</text><text x="165" y="290" class="frontier-value-label">value</text><text x="518" y="270" class="frontier-cost-label">cost</text>
-    <path d="M122 444 H417" class="frontier-worth" /><text x="270" y="474" text-anchor="middle" class="frontier-worth-label">worth buying</text><text x="530" y="474" text-anchor="middle" class="frontier-not-worth-label">diminishing returns</text>
+  <svg viewBox="0 0 720 440" role="img" aria-labelledby="token-frontier-title token-frontier-desc">
+    <title id="token-frontier-title">When another token is worth buying</title>
+    <desc id="token-frontier-desc">A green value curve rises quickly then flattens. An orange full-cost line rises steadily. The blue threshold marks where a system should stop, escalate, or seek approval.</desc>
+    <rect x="20" y="20" width="680" height="400" rx="24" class="token-figure-surface" />
+    <text x="64" y="68" class="token-figure-kicker">MARGINAL DECISION</text>
+    <text x="64" y="104" class="token-figure-title">When is another token worth buying?</text>
+    <text x="64" y="132" class="frontier-subtitle">Spend until the next unit of compute no longer pays for itself.</text>
+    <path d="M112 350 H632 M112 350 V168" class="frontier-axis" />
+    <path d="M118 334 C184 244 258 196 334 170 C418 141 500 136 620 134" class="frontier-value" />
+    <path d="M118 338 L620 178" class="frontier-cost" />
+    <path d="M410 350 V158" class="frontier-threshold" /><circle cx="410" cy="153" r="7" class="frontier-stop-dot" />
+    <text x="428" y="157" class="frontier-stop-label">stop or escalate</text>
+    <text x="192" y="232" class="frontier-value-label">expected value</text><text x="522" y="245" class="frontier-cost-label">full cost</text>
+    <path d="M128 376 H407" class="frontier-worth" /><text x="267" y="399" text-anchor="middle" class="frontier-worth-label">worth buying</text><text x="526" y="399" text-anchor="middle" class="frontier-not-worth-label">diminishing returns</text>
+    <text x="626" y="376" text-anchor="end" class="frontier-axis-label">compute spend</text>
   </svg>
-  <figcaption>The budget is not a fixed maximum. It is a conditional right to spend while marginal expected value remains above full marginal cost.</figcaption>
 </figure>

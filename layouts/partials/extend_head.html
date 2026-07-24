@@ -112,13 +112,6 @@
   height: auto;
 }
 
-.token-figure figcaption {
-  padding: 0.45rem 0.45rem 0.15rem;
-  color: var(--secondary);
-  font-size: 0.9rem;
-  line-height: 1.55;
-}
-
 .token-figure-surface {
   fill: var(--theme);
   stroke: var(--border);
@@ -127,62 +120,26 @@
 
 .token-figure-kicker {
   fill: #0ea5e9;
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 1.4px;
 }
 
 .token-figure-title {
   fill: var(--primary);
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 650;
 }
 
-.token-map-connector,
+.frontier-subtitle {
+  fill: var(--secondary);
+  font-size: 16px;
+}
+
 .frontier-axis {
   fill: none;
   stroke: var(--border);
   stroke-width: 2;
-}
-
-.token-map-arrow path {
-  fill: none;
-  stroke: #0ea5e9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 3;
-}
-
-.token-map-card {
-  fill: var(--entry);
-  stroke-width: 2;
-}
-
-.token-map-blue { stroke: #0ea5e9; }
-.token-map-cyan { stroke: #06b6d4; }
-.token-map-teal { stroke: #14b8a6; }
-.token-map-violet { stroke: #8b5cf6; }
-.token-map-green { stroke: #22c55e; }
-
-.token-map-number {
-  fill: #0ea5e9;
-}
-
-.token-map-number-text {
-  fill: white;
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.token-map-label {
-  fill: var(--primary);
-  font-size: 28px;
-  font-weight: 650;
-}
-
-.token-map-detail {
-  fill: var(--secondary);
-  font-size: 22px;
 }
 
 .frontier-value,
@@ -197,24 +154,19 @@
 .frontier-cost { stroke: #f97316; stroke-width: 4; }
 .frontier-threshold { stroke: #0ea5e9; stroke-dasharray: 7 7; stroke-width: 2; }
 .frontier-stop-dot { fill: #0ea5e9; }
-.frontier-axis-label { fill: var(--secondary); font-size: 20px; }
-.frontier-stop-label { fill: #0ea5e9; font-size: 17px; font-weight: 650; }
-.frontier-value-label { fill: #10b981; font-size: 20px; font-weight: 650; }
-.frontier-cost-label { fill: #f97316; font-size: 20px; font-weight: 650; }
+.frontier-axis-label { fill: var(--secondary); font-size: 15px; }
+.frontier-stop-label { fill: #0ea5e9; font-size: 15px; font-weight: 650; }
+.frontier-value-label { fill: #10b981; font-size: 17px; font-weight: 650; }
+.frontier-cost-label { fill: #f97316; font-size: 17px; font-weight: 650; }
 .frontier-worth { stroke: #10b981; stroke-width: 3; }
-.frontier-worth-label { fill: #10b981; font-size: 17px; font-weight: 650; }
-.frontier-not-worth-label { fill: var(--secondary); font-size: 17px; }
+.frontier-worth-label { fill: #10b981; font-size: 15px; font-weight: 650; }
+.frontier-not-worth-label { fill: var(--secondary); font-size: 15px; }
 
 @media (max-width: 700px) {
   .token-figure {
     margin: 1.5rem 0 2rem;
     padding: 0.3rem;
     border-radius: 14px;
-  }
-
-  .token-figure figcaption {
-    padding: 0.5rem 0.35rem 0.2rem;
-    font-size: 0.84rem;
   }
 }
 
