@@ -22,7 +22,9 @@ Since then, “speculative decoding” has become a family of methods rather tha
 
 For an autoregressive target model $p$, a continuation $x_{1:T}$ is generated as
 
-<div class="formula" role="math">$$p(x_{1:T}\mid c)=\prod_{t=1}^{T}p(x_t\mid c,x_{<t})$$</div>
+$$
+p(x&#95;{1:T}\mid c)=\prod&#95;{t=1}^{T}p(x&#95;t\mid c,x&#95;{&lt;t})
+$$
 
 where $c$ is the prompt. A normal decoder must run the target model once, commit $x_t$, then run it again for $x_{t+1}$. The model's matrix multiplications are parallel; the *chain of decisions* is not.
 
@@ -40,21 +42,33 @@ Speculation wins only when it turns enough target passes into one verification p
 
 Let $q$ be a cheap draft distribution and $p$ the target distribution. At a verified prefix $x_{<t}$, the drafter samples a block of $\gamma$ tokens:
 
-<div class="formula" role="math">$$\tilde{x}_{t:t+\gamma-1}\sim q(\cdot\mid x_{<t})$$</div>
+$$
+\tilde{x}&#95;{t:t+\gamma-1}\sim q(\cdot\mid x&#95;{&lt;t})
+$$
 
 The target then evaluates the proposed positions in one causal forward pass. For the $i$-th proposal, define
 
-<div class="formula" role="math">$$p_i(v)=p(v\mid x_{<t},\tilde{x}_{t:t+i-1}), \qquad q_i(v)=q(v\mid x_{<t},\tilde{x}_{t:t+i-1})$$</div>
+$$
+p&#95;i(v)=p(v\mid x&#95;{&lt;t},\tilde{x}&#95;{t:t+i-1})
+$$
+
+$$
+q&#95;i(v)=q(v\mid x&#95;{&lt;t},\tilde{x}&#95;{t:t+i-1})
+$$
 
 For sampled decoding, the proposal $\tilde{x}_{t+i}$ is accepted with probability
 
-<div class="formula" role="math">$$\alpha_i=\min\left(1,\frac{p_i(\tilde{x}_{t+i})}{q_i(\tilde{x}_{t+i})}\right)$$</div>
+$$
+\alpha&#95;i=\min\left(1,\frac{p&#95;i(\tilde{x}&#95;{t+i})}{q&#95;i(\tilde{x}&#95;{t+i})}\right)
+$$
 
 Accept proposals from left to right until the first rejection. If the first rejection is at $i$, sample a correction token from the residual distribution
 
-<div class="formula" role="math">$$r_i(v)=\frac{\max\bigl(0,p_i(v)-q_i(v)\bigr)}{\sum_u\max\bigl(0,p_i(u)-q_i(u)\bigr)}$$</div>
+$$
+r&#95;i(v)=\frac{[p&#95;i(v)-q&#95;i(v)]&#95;+}{\sum&#95;u[p&#95;i(u)-q&#95;i(u)]&#95;+}
+$$
 
-Then discard every draft token after that point and begin again. If all $\gamma$ proposals are accepted, sample one extra token from the target distribution and continue.
+Here $[z]&#95;+=\max(0,z)$. Then discard every draft token after that point and begin again. If all $\gamma$ proposals are accepted, sample one extra token from the target distribution and continue.
 
 That residual correction is not a detail. It is why the method is exact. The draft distribution contributes the part of probability mass it already proposed; the correction samples exactly the target mass the draft underrepresented. At each position, accepted mass plus residual mass equals $p_i$. By induction over positions, the entire emitted sequence has the target model's distribution.
 
@@ -95,7 +109,9 @@ There is another important boundary: many systems casually called “speculative
 
 Suppose a speculative cycle accepts $A$ drafted tokens and emits one additional target token when the whole block is accepted. Its useful progress is approximately $A+1$ tokens per target verification. Let $C_p$ be a standard target decode step, $C_v(\gamma)$ the target verification pass, and $C_q(\gamma)$ the drafting cost. A rough latency model is
 
-<div class="formula" role="math">$$\text{speedup}\approx\frac{(\mathbb{E}[A]+1)C_p}{C_v(\gamma)+C_q(\gamma)+C_{\text{overhead}}}$$</div>
+$$
+\text{speedup}\approx\frac{(\mathbb{E}[A]+1)C&#95;p}{C&#95;v(\gamma)+C&#95;q(\gamma)+C&#95;{\text{overhead}}}
+$$
 
 This equation explains nearly every practical surprise.
 
@@ -177,7 +193,9 @@ People often say “use a very accurate draft model.” The more precise stateme
 
 For one position, the probability that a proposal is accepted under the exact rule is
 
-<div class="formula" role="math">$$\Pr(\text{accept})=\sum_v\min(p(v),q(v))=1-\operatorname{TV}(p,q)$$</div>
+$$
+\Pr(\text{accept})=\sum&#95;v\min(p(v),q(v))=1-\operatorname{TV}(p,q)
+$$
 
 where $\operatorname{TV}$ is total variation distance. The acceptance probability is the overlap of the two distributions. It is not top-1 accuracy, and it is not perplexity alone.
 
