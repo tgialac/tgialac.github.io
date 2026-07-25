@@ -14,6 +14,11 @@ Speculative decoding changes the shape of the work. A cheap process predicts sev
 
 This distinction is the whole idea. It is also where most shallow explanations go wrong.
 
+<figure class="article-figure article-figure-hero">
+  <img src="/images/illustrations/speculative-decoding-pipeline.png" alt="A draft language model proposes four tokens, then a target model verifies them once, accepts a prefix, and corrects the next token." width="1672" height="941" fetchpriority="high">
+  <figcaption>A cheap draft proposes; the target verifies once, commits the accepted prefix, and corrects the first mismatch.</figcaption>
+</figure>
+
 The original modern formulation by Leviathan, Kalman, and Matias showed 2–3× acceleration on T5-XXL with unchanged outputs. [*Fast Inference from Transformers via Speculative Decoding* (ICML 2023)](https://proceedings.mlr.press/v202/leviathan23a.html) In a related line of work, Xia et al. developed a draft-and-verify formulation for sequence-to-sequence generation, reporting strong task-specific gains. [*Speculative Decoding* (Findings of EMNLP 2023)](https://aclanthology.org/2023.findings-emnlp.257/)
 
 Since then, “speculative decoding” has become a family of methods rather than one algorithm: small draft models, early exits from the target itself, multi-head predictors, retrieval and n-gram drafters, dynamic trees, long-context systems, and even diffusion-language-model adaptations. This article builds the shared mental model first, then explains what genuinely changes across the variants.
@@ -141,6 +146,11 @@ These are not mutually exclusive. A retrieval proposal can augment EAGLE; a long
 A linear block asks one question: “what is the most likely next sequence?” That is wasteful when the first uncertain token has several plausible alternatives. Tree-based speculation spends the same verification opportunity on branches.
 
 The drafter proposes a prefix tree rather than a single chain. Tree attention assigns each node only the ancestors on its own branch, allowing the target to score many candidates in one pass without letting sibling branches contaminate one another. The system then finds the longest accepted root-to-leaf path and emits its prefix.
+
+<figure class="article-figure">
+  <img src="/images/illustrations/tree-speculation.png" alt="A draft model proposes several branches of a token tree; the target verifies the candidates and selects the longest accepted path before correcting the next token." width="1536" height="1024" loading="lazy">
+  <figcaption>Tree speculation allocates a verification pass across plausible futures rather than one linear draft.</figcaption>
+</figure>
 
 
 [SpecInfer](https://arxiv.org/abs/2305.09781) popularized tree-based speculative serving; [Medusa](https://arxiv.org/abs/2401.10774) generates candidate trees through extra decoding heads; [EAGLE-2](https://aclanthology.org/2024.emnlp-main.422/) makes the tree context-adaptive using draft confidence. The paper's reported 5× figure is a result under its own models, tasks, hardware, and batch setting—not a portable multiplier. That caveat belongs beside every speculative-decoding number.
