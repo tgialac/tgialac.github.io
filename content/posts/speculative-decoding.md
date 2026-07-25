@@ -14,7 +14,7 @@ Speculative decoding changes the shape of the work. A cheap process predicts sev
 
 This distinction is the whole idea. It is also where most shallow explanations go wrong.
 
-The original modern formulation by Leviathan, Kalman, and Matias showed 2–3× acceleration on T5-XXL with unchanged outputs. [*Fast Inference from Transformers via Speculative Decoding* (ICML 2023)](https://proceedings.mlr.press/v202/leviathan23a.html) Concurrently, Xia et al. developed a draft-and-verify formulation for sequence-to-sequence generation, reporting strong task-specific gains. [*Speculative Decoding* (Findings of EMNLP 2023)](https://aclanthology.org/2023.findings-emnlp.257/)
+The original modern formulation by Leviathan, Kalman, and Matias showed 2–3× acceleration on T5-XXL with unchanged outputs. [*Fast Inference from Transformers via Speculative Decoding* (ICML 2023)](https://proceedings.mlr.press/v202/leviathan23a.html) In a related line of work, Xia et al. developed a draft-and-verify formulation for sequence-to-sequence generation, reporting strong task-specific gains. [*Speculative Decoding* (Findings of EMNLP 2023)](https://aclanthology.org/2023.findings-emnlp.257/)
 
 Since then, “speculative decoding” has become a family of methods rather than one algorithm: small draft models, early exits from the target itself, multi-head predictors, retrieval and n-gram drafters, dynamic trees, long-context systems, and even diffusion-language-model adaptations. This article builds the shared mental model first, then explains what genuinely changes across the variants.
 
@@ -22,7 +22,9 @@ Since then, “speculative decoding” has become a family of methods rather tha
 
 For an autoregressive target model $p$, a continuation $x_{1:T}$ is generated as
 
-<div class="formula" role="math"><i>p</i>(<i>x</i><sub>1:T</sub> | <i>c</i>) = ∏<sub>t=1</sub><sup>T</sup> <i>p</i>(<i>x</i><sub>t</sub> | <i>c</i>, <i>x</i><sub>&lt;t</sub>)</div>
+$$
+p(x_{1:T}\mid c)=\prod_{t=1}^{T}p(x_t\mid c,x_{<t})
+$$
 
 where $c$ is the prompt. A normal decoder must run the target model once, commit $x_t$, then run it again for $x_{t+1}$. The model's matrix multiplications are parallel; the *chain of decisions* is not.
 
@@ -40,23 +42,33 @@ Speculation wins only when it turns enough target passes into one verification p
 
 Let $q$ be a cheap draft distribution and $p$ the target distribution. At a verified prefix $x_{<t}$, the drafter samples a block of $\gamma$ tokens:
 
-<div class="formula" role="math"><i>x̃</i><sub>t:t+γ−1</sub> ∼ <i>q</i>(· | <i>x</i><sub>&lt;t</sub>)</div>
+$$
+\tilde{x}_{t:t+\gamma-1}\sim q(\cdot\mid x_{<t})
+$$
 
 The target then evaluates the proposed positions in one causal forward pass. For the $i$-th proposal, define
 
-<div class="formula formula-wide" role="math"><i>p</i><sub>i</sub>(v) = <i>p</i>(v | <i>x</i><sub>&lt;t</sub>, <i>x̃</i><sub>t:t+i−1</sub>)<br><i>q</i><sub>i</sub>(v) = <i>q</i>(v | <i>x</i><sub>&lt;t</sub>, <i>x̃</i><sub>t:t+i−1</sub>)</div>
+$$
+p_i(v)=p(v\mid x_{<t},\tilde{x}_{t:t+i-1}), \qquad q_i(v)=q(v\mid x_{<t},\tilde{x}_{t:t+i-1})
+$$
 
 For sampled decoding, the proposal $\tilde{x}_{t+i}$ is accepted with probability
 
-<div class="formula" role="math"><i>α</i><sub>i</sub> = min(1, <i>p</i><sub>i</sub>(<i>x̃</i><sub>t+i</sub>) / <i>q</i><sub>i</sub>(<i>x̃</i><sub>t+i</sub>))</div>
+$$
+\alpha_i=\min\left(1,\frac{p_i(\tilde{x}_{t+i})}{q_i(\tilde{x}_{t+i})}\right)
+$$
 
 Accept proposals from left to right until the first rejection. If the first rejection is at $i$, sample a correction token from the residual distribution
 
-<div class="formula formula-wide" role="math"><i>r</i><sub>i</sub>(v) = [<i>p</i><sub>i</sub>(v) − <i>q</i><sub>i</sub>(v)]<sub>+</sub> / Σ<sub>u</sub>[<i>p</i><sub>i</sub>(u) − <i>q</i><sub>i</sub>(u)]<sub>+</sub></div>
+$$
+r_i(v)=\frac{\max\bigl(0,p_i(v)-q_i(v)\bigr)}{\sum_u\max\bigl(0,p_i(u)-q_i(u)\bigr)}
+$$
 
 Then discard every draft token after that point and begin again. If all $\gamma$ proposals are accepted, sample one extra token from the target distribution and continue.
 
 That residual correction is not a detail. It is why the method is exact. The draft distribution contributes the part of probability mass it already proposed; the correction samples exactly the target mass the draft underrepresented. At each position, accepted mass plus residual mass equals $p_i$. By induction over positions, the entire emitted sequence has the target model's distribution.
+
+For intuition, suppose a draft proposes three tokens. If the target accepts the first two and rejects the third, emit those two accepted tokens and one correction drawn from $r_i$; never commit the draft tokens after the rejection. The next proposal starts from that corrected prefix. This left-to-right rule is what keeps every later conditional distribution valid.
 
 ### Pseudocode
 
@@ -81,7 +93,7 @@ while not stopped:
         prefix += extra
 ```
 
-Real implementations must apply the *same* temperature, top-$p$, top-$k$, repetition penalties, vocabulary mapping, stop conditions, and logits processors to the distributions used in the ratio. “We used the same models” is not enough. If $p$ and $q$ describe differently transformed distributions, the exactness argument no longer applies.
+Real implementations must apply the *same* temperature, top-$p$, top-$k$, repetition penalties, stop conditions, vocabulary mapping, and logits processors to the distributions used in the ratio. The distributions must also refer to the same conditional prefix. “We used the same models” is not enough. If $p$ and $q$ describe differently transformed distributions—or incompatible token spaces—the exactness argument no longer applies.
 
 ### Greedy decoding is simpler—and different
 
@@ -93,7 +105,9 @@ There is another important boundary: many systems casually called “speculative
 
 Suppose a speculative cycle accepts $A$ drafted tokens and emits one additional target token when the whole block is accepted. Its useful progress is approximately $A+1$ tokens per target verification. Let $C_p$ be a standard target decode step, $C_v(\gamma)$ the target verification pass, and $C_q(\gamma)$ the drafting cost. A rough latency model is
 
-<div class="formula formula-wide" role="math">speedup ≈ ((E[A] + 1) · C<sub>p</sub>) / (C<sub>v</sub>(γ) + C<sub>q</sub>(γ) + C<sub>overhead</sub>)</div>
+$$
+\text{speedup}\approx\frac{(\mathbb{E}[A]+1)C_p}{C_v(\gamma)+C_q(\gamma)+C_{\text{overhead}}}
+$$
 
 This equation explains nearly every practical surprise.
 
@@ -175,7 +189,9 @@ People often say “use a very accurate draft model.” The more precise stateme
 
 For one position, the probability that a proposal is accepted under the exact rule is
 
-<div class="formula formula-wide" role="math">Pr(accept) = Σ<sub>v</sub> min(<i>p</i>(v), <i>q</i>(v)) = 1 − TV(<i>p</i>, <i>q</i>)</div>
+$$
+\Pr(\text{accept})=\sum_v\min(p(v),q(v))=1-\operatorname{TV}(p,q)
+$$
 
 where $\operatorname{TV}$ is total variation distance. The acceptance probability is the overlap of the two distributions. It is not top-1 accuracy, and it is not perplexity alone.
 
