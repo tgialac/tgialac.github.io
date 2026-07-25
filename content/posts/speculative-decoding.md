@@ -22,9 +22,9 @@ Since then, “speculative decoding” has become a family of methods rather tha
 
 For an autoregressive target model $p$, a continuation $x_{1:T}$ is generated as
 
-$$
+\\[
 p(x_{1:T}\mid c)=\prod_{t=1}^{T}p(x_t\mid c,x_{<t}),
-$$
+\\]
 
 where $c$ is the prompt. A normal decoder must run the target model once, commit $x_t$, then run it again for $x_{t+1}$. The model's matrix multiplications are parallel; the *chain of decisions* is not.
 
@@ -42,29 +42,29 @@ Speculation wins only when it turns enough target passes into one verification p
 
 Let $q$ be a cheap draft distribution and $p$ the target distribution. At a verified prefix $x_{<t}$, the drafter samples a block of $\gamma$ tokens:
 
-$$
+\\[
 \tilde{x}_{t:t+\gamma-1}\sim q(\cdot\mid x_{<t}).
-$$
+\\]
 
 The target then evaluates the proposed positions in one causal forward pass. For the $i$-th proposal, define
 
-$$
+\\[
 p_i(v)=p(v\mid x_{<t},\tilde{x}_{t:t+i-1}), \qquad
 q_i(v)=q(v\mid x_{<t},\tilde{x}_{t:t+i-1}).
-$$
+\\]
 
 For sampled decoding, the proposal $\tilde{x}_{t+i}$ is accepted with probability
 
-$$
+\\[
 \alpha_i=\min\left(1,\frac{p_i(\tilde{x}_{t+i})}{q_i(\tilde{x}_{t+i})}\right).
-$$
+\\]
 
 Accept proposals from left to right until the first rejection. If the first rejection is at $i$, sample a correction token from the residual distribution
 
-$$
+\\[
 r_i(v)=\frac{\max\bigl(0,p_i(v)-q_i(v)\bigr)}
 {\sum_u\max\bigl(0,p_i(u)-q_i(u)\bigr)}.
-$$
+\\]
 
 Then discard every draft token after that point and begin again. If all $\gamma$ proposals are accepted, sample one extra token from the target distribution and continue.
 
@@ -105,10 +105,10 @@ There is another important boundary: many systems casually called “speculative
 
 Suppose a speculative cycle accepts $A$ drafted tokens and emits one additional target token when the whole block is accepted. Its useful progress is approximately $A+1$ tokens per target verification. Let $C_p$ be a standard target decode step, $C_v(\gamma)$ the target verification pass, and $C_q(\gamma)$ the drafting cost. A rough latency model is
 
-$$
+\\[
 \text{speedup}\ \approx\ \frac{(\mathbb{E}[A]+1)C_p}
 {C_v(\gamma)+C_q(\gamma)+C_{\text{overhead}}}.
-$$
+\\]
 
 This equation explains nearly every practical surprise.
 
@@ -162,7 +162,7 @@ The tradeoff is architectural. Ordinary intermediate-layer logits are rarely goo
 
 ### 3. Heads and feature-level drafting
 
-[Medusa](https://arxiv.org/abs/2401.10774) adds multiple decoding heads to predict future positions in parallel and uses tree attention to verify their candidates. Its frozen-backbone variant is designed for lossless acceleration; its jointly trained variant pursues stronger proposals at the cost of a more specialized model.
+[Medusa](https://arxiv.org/abs/2401.10774) adds multiple decoding heads to predict future positions in parallel and uses tree attention to verify their candidates. It offers a lightweight frozen-backbone path and a jointly trained path that pursues stronger proposals at the cost of a more specialized model. Its quality claims should be read separately from the exact-sampling guarantee of classical speculative sampling.
 
 [EAGLE](https://arxiv.org/abs/2401.15077) takes a different route: it drafts at the contextual-feature level, reusing target information before token prediction. [EAGLE-2](https://aclanthology.org/2024.emnlp-main.422/) adds dynamic draft trees. [EAGLE-3](https://arxiv.org/abs/2503.01840) replaces the feature-prediction constraint with direct token prediction and multi-layer feature fusion. These are powerful because the drafter sees rich target-model representations; they are less drop-in because training, checkpoint format, and serving runtime become coupled.
 
@@ -190,11 +190,11 @@ People often say “use a very accurate draft model.” The more precise stateme
 
 For one position, the probability that a proposal is accepted under the exact rule is
 
-$$
+\\[
 \sum_v q(v)\min\left(1,\frac{p(v)}{q(v)}\right)
 =\sum_v\min(p(v),q(v))
 =1-\operatorname{TV}(p,q),
-$$
+\\]
 
 where $\operatorname{TV}$ is total variation distance. The acceptance probability is the overlap of the two distributions. It is not top-1 accuracy, and it is not perplexity alone.
 
@@ -236,24 +236,6 @@ Treat speculative decoding as an experiment with a narrow hypothesis: *for this 
 
 The last step is essential. A production decoder should be able to stop speculating. The safe fallback is not a failure; it is the reason the optimization can be deployed responsibly.
 
-## A compact paper map
-
-The literature is moving quickly, but the following landmarks explain the field's major turns.
-
-| Year | Paper | Contribution |
-| --- | --- | --- |
-| 2018 | [Blockwise Parallel Decoding](https://arxiv.org/abs/1811.03115) | Early block verification precursor. |
-| 2023 | [Leviathan et al.](https://proceedings.mlr.press/v202/leviathan23a.html) | Exact speculative sampling with an external drafter. |
-| 2023 | [Xia et al.](https://aclanthology.org/2023.findings-emnlp.257/) | Formal draft-and-verify study for seq2seq generation. |
-| 2024 | [Medusa](https://arxiv.org/abs/2401.10774) | Parallel decoding heads and tree attention. |
-| 2024 | [EAGLE](https://arxiv.org/abs/2401.15077) / [EAGLE-2](https://aclanthology.org/2024.emnlp-main.422/) | Feature-level drafting, then context-aware dynamic trees. |
-| 2024 | [LayerSkip](https://aclanthology.org/2024.acl-long.681/) | Early-exit self-speculation. |
-| 2024 | [REST](https://aclanthology.org/2024.naacl-long.88/) | Retrieval as a training-free drafter. |
-| 2025 | [SAM Decoding](https://aclanthology.org/2025.acl-long.595/) | Suffix automata for retrieval-based drafts. |
-| 2025 | [EAGLE-3](https://arxiv.org/abs/2503.01840) | Direct token prediction with multi-layer feature fusion. |
-| 2025 | [Speculative Decoding and Beyond](https://arxiv.org/abs/2502.19732) | Broad survey of generation–refinement methods. |
-
-For a wider bibliography and a comparative taxonomy, start with [*Unlocking Efficiency in Large Language Model Inference*](https://arxiv.org/abs/2401.07851) and the 2025 survey above. The papers are best read as a design space, not a leaderboard: their reported speedups differ in target model, drafter, task, decoding policy, length distribution, precision, GPU, batch size, and serving stack.
 
 ## The deeper pattern
 
@@ -264,3 +246,27 @@ The method works because language is uneven. A strong model is sometimes needed 
 That is why the target model's final say matters. It turns a fallible guess into a safe optimization. And it is why the best question is not, “How many tokens can my drafter predict?” It is:
 
 > **How much expensive serial work can this system eliminate while preserving the behavior the user is actually paying for?**
+
+
+## References and further reading
+
+### Foundations
+
+- [Fast Inference from Transformers via Speculative Decoding — Leviathan, Kalman, Matias (ICML 2023)](https://proceedings.mlr.press/v202/leviathan23a.html)
+- [Accelerating Large Language Model Decoding with Speculative Sampling — Chen et al. (2023)](https://arxiv.org/abs/2302.01318)
+- [Speculative Decoding: Exploiting Speculative Execution for Accelerating Seq2seq Generation — Xia et al. (Findings of EMNLP 2023)](https://aclanthology.org/2023.findings-emnlp.257/)
+
+### Variants and systems
+
+- [SpecInfer: Tree-based speculative inference and verification](https://arxiv.org/abs/2305.09781)
+- [Medusa: Multiple decoding heads](https://arxiv.org/abs/2401.10774) and [Hydra: Sequentially-dependent draft heads](https://arxiv.org/abs/2402.05109)
+- [LayerSkip: Early exit and self-speculative decoding](https://aclanthology.org/2024.acl-long.681/)
+- [EAGLE](https://arxiv.org/abs/2401.15077), [EAGLE-2](https://aclanthology.org/2024.emnlp-main.422/), and [EAGLE-3](https://arxiv.org/abs/2503.01840)
+- [REST: Retrieval-based speculative decoding](https://aclanthology.org/2024.naacl-long.88/) and [SAM Decoding: Suffix automata for drafting](https://aclanthology.org/2025.acl-long.595/)
+- [TriForce: Long-sequence generation with sparse attention and speculation](https://arxiv.org/abs/2404.11912)
+- [QSpec: Complementary quantization schemes for speculative decoding](https://aclanthology.org/2025.emnlp-main.240/)
+
+### Surveys
+
+- [Unlocking Efficiency in Large Language Model Inference: A Comprehensive Survey of Speculative Decoding](https://arxiv.org/abs/2401.07851)
+- [Speculative Decoding and Beyond: An In-Depth Survey of Techniques](https://arxiv.org/abs/2502.19732)
