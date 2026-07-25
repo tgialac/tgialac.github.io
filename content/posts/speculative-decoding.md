@@ -22,9 +22,7 @@ Since then, “speculative decoding” has become a family of methods rather tha
 
 For an autoregressive target model $p$, a continuation $x_{1:T}$ is generated as
 
-$$
-p(x_{1:T}\mid c)=\prod_{t=1}^{T}p(x_t\mid c,x_{<t})
-$$
+<div class="formula" role="math">$$p(x_{1:T}\mid c)=\prod_{t=1}^{T}p(x_t\mid c,x_{<t})$$</div>
 
 where $c$ is the prompt. A normal decoder must run the target model once, commit $x_t$, then run it again for $x_{t+1}$. The model's matrix multiplications are parallel; the *chain of decisions* is not.
 
@@ -42,27 +40,19 @@ Speculation wins only when it turns enough target passes into one verification p
 
 Let $q$ be a cheap draft distribution and $p$ the target distribution. At a verified prefix $x_{<t}$, the drafter samples a block of $\gamma$ tokens:
 
-$$
-\tilde{x}_{t:t+\gamma-1}\sim q(\cdot\mid x_{<t})
-$$
+<div class="formula" role="math">$$\tilde{x}_{t:t+\gamma-1}\sim q(\cdot\mid x_{<t})$$</div>
 
 The target then evaluates the proposed positions in one causal forward pass. For the $i$-th proposal, define
 
-$$
-p_i(v)=p(v\mid x_{<t},\tilde{x}_{t:t+i-1}), \qquad q_i(v)=q(v\mid x_{<t},\tilde{x}_{t:t+i-1})
-$$
+<div class="formula" role="math">$$p_i(v)=p(v\mid x_{<t},\tilde{x}_{t:t+i-1}), \qquad q_i(v)=q(v\mid x_{<t},\tilde{x}_{t:t+i-1})$$</div>
 
 For sampled decoding, the proposal $\tilde{x}_{t+i}$ is accepted with probability
 
-$$
-\alpha_i=\min\left(1,\frac{p_i(\tilde{x}_{t+i})}{q_i(\tilde{x}_{t+i})}\right)
-$$
+<div class="formula" role="math">$$\alpha_i=\min\left(1,\frac{p_i(\tilde{x}_{t+i})}{q_i(\tilde{x}_{t+i})}\right)$$</div>
 
 Accept proposals from left to right until the first rejection. If the first rejection is at $i$, sample a correction token from the residual distribution
 
-$$
-r_i(v)=\frac{\max\bigl(0,p_i(v)-q_i(v)\bigr)}{\sum_u\max\bigl(0,p_i(u)-q_i(u)\bigr)}
-$$
+<div class="formula" role="math">$$r_i(v)=\frac{\max\bigl(0,p_i(v)-q_i(v)\bigr)}{\sum_u\max\bigl(0,p_i(u)-q_i(u)\bigr)}$$</div>
 
 Then discard every draft token after that point and begin again. If all $\gamma$ proposals are accepted, sample one extra token from the target distribution and continue.
 
@@ -105,9 +95,7 @@ There is another important boundary: many systems casually called “speculative
 
 Suppose a speculative cycle accepts $A$ drafted tokens and emits one additional target token when the whole block is accepted. Its useful progress is approximately $A+1$ tokens per target verification. Let $C_p$ be a standard target decode step, $C_v(\gamma)$ the target verification pass, and $C_q(\gamma)$ the drafting cost. A rough latency model is
 
-$$
-\text{speedup}\approx\frac{(\mathbb{E}[A]+1)C_p}{C_v(\gamma)+C_q(\gamma)+C_{\text{overhead}}}
-$$
+<div class="formula" role="math">$$\text{speedup}\approx\frac{(\mathbb{E}[A]+1)C_p}{C_v(\gamma)+C_q(\gamma)+C_{\text{overhead}}}$$</div>
 
 This equation explains nearly every practical surprise.
 
@@ -189,9 +177,7 @@ People often say “use a very accurate draft model.” The more precise stateme
 
 For one position, the probability that a proposal is accepted under the exact rule is
 
-$$
-\Pr(\text{accept})=\sum_v\min(p(v),q(v))=1-\operatorname{TV}(p,q)
-$$
+<div class="formula" role="math">$$\Pr(\text{accept})=\sum_v\min(p(v),q(v))=1-\operatorname{TV}(p,q)$$</div>
 
 where $\operatorname{TV}$ is total variation distance. The acceptance probability is the overlap of the two distributions. It is not top-1 accuracy, and it is not perplexity alone.
 
