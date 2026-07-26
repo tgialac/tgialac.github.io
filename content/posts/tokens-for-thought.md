@@ -147,15 +147,16 @@ High aggregate throughput is not useful capacity if it comes with a sharply wors
 A senior inference engineer turns a product promise into an explicit constrained optimisation problem. For example:
 
 $$
-\begin{aligned}
-\max \quad & \text{tokens per GPU-hour} \\
-\text{s.t.}\quad & \text{TTFT}_{p99} \le 2\,\text{s}, \\
-& \text{ITL}_{p99} \le 50\,\text{ms}, \\
-& \text{TPS}_{\text{user}} \ge 40, \\
-& Q \ge Q^{\star}, \\
-& \text{error rate} \le 0.1\%.
-\end{aligned}
+\max \quad \text{tokens per GPU-hour}
 $$
+
+subject to:
+
+- $P99(\text{TTFT}) \le 2\,\text{s}$;
+- $P99(\text{ITL}) \le 50\,\text{ms}$;
+- $\text{TPS per user} \ge 40$;
+- $Q \ge Q^{\star}$; and
+- $\text{error rate} \le 0.1\%$.
 
 Or the economic objective may be to minimise cost per million tokens subject to the same quality and service constraints:
 
