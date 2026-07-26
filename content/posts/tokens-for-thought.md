@@ -114,6 +114,71 @@ $$
 \min C \quad \text{s.t.}\quad Q\ge Q^{\star}, \quad \text{TTFT}\_{p95}\le\tau_1, \quad \text{TPOT}\_{p95}\le\tau_2, \quad R\le R^{\star}.
 $$
 
+### Performance is a four-variable business constraint
+
+Inference engineering has four coupled outputs: **quality, latency, throughput, and cost**. The job is not to maximise one at the expense of the other three. A throughput gain that makes streaming jerky, a quantisation choice that damages quality, or a low unit cost that violates the latency promise is not an optimisation. It is a different—and often worse—product.
+
+This is why performance is a business variable, not a benchmark appendix:
+
+$$
+\text{performance} \rightarrow \text{capacity} \rightarrow \text{cost per token} \rightarrow \text{revenue and margin}.
+$$
+
+Choosing BF16, FP8, or FP4; writing or fusing a kernel; setting batch size; separating prefill from decode; placing MoE experts; and tuning a scheduler can all change how many users a fleet serves and what each token costs. The useful report is therefore not “throughput increased 25%.” It is: “at the same quality and SLO, tokens per GPU-hour increased 25%, compute cost per token fell by about 20%, and the next capacity purchase moved further out.” That is the bridge from a technical change to a product and P&L decision.
+
+#### Optimise useful token budget, not an isolated benchmark
+
+Theoretical token capacity is often written as
+
+$$
+B = N_{\text{GPU}} \times T_{\text{GPU}},
+$$
+
+where $N_{\text{GPU}}$ is the number of GPUs and $T_{\text{GPU}}$ is tokens per second per GPU. In production, the more honest quantity is
+
+$$
+B_{\text{useful}} = \text{sustained throughput under the real SLO and quality contract}.
+$$
+
+High aggregate throughput is not useful capacity if it comes with a sharply worse TTFT, bursty token delivery, poor tail latency, degraded quality, or rising cancellation and error rates. Measure aggregate throughput alongside per-user tokens per second, median latency, and tail latency. The system has not gained capacity if interactive use has become unacceptable.
+
+#### Write the objective function before choosing the trick
+
+A senior inference engineer turns a product promise into an explicit constrained optimisation problem. For example:
+
+$$
+\begin{aligned}
+\max \quad & \text{tokens per GPU-hour} \\
+\text{s.t.}\quad & \text{TTFT}_{p99} \le 2\,\text{s}, \\
+& \text{ITL}_{p99} \le 50\,\text{ms}, \\
+& \text{TPS}_{\text{user}} \ge 40, \\
+& Q \ge Q^{\star}, \\
+& \text{error rate} \le 0.1\%.
+\end{aligned}
+$$
+
+Or the economic objective may be to minimise cost per million tokens subject to the same quality and service constraints:
+
+$$
+C_{1\text{M}} = \frac{C_{\text{GPU-hour}}}{\text{tokens per GPU-hour}} \times 1{,}000{,}000.
+$$
+
+The numerator must be fully loaded: accelerator capacity, power, cooling, networking, operations, utilisation, and relevant data-centre overhead—not merely the marginal electricity draw. This is how a serving metric becomes a decision metric.
+
+#### Start with the workload, not a favourite technique
+
+There is no universally best inference optimisation. The right choice depends on the model, hardware, workload, and SLO. Before reaching for quantisation, a new scheduler, or a kernel fusion, establish the workload distribution:
+
+- prompt- and output-length distributions;
+- streaming share, cold versus warm prefix ratio, and cache-hit rate;
+- average and peak concurrency, including tenant-level bursts;
+- the relative importance of TTFT, per-user token rate, and aggregate throughput;
+- the share of input, output, and cached tokens;
+- network and communication topology; and
+- workload class: chat, coding agent, long context, batch, or multi-agent loops with tool calls.
+
+Only then can a team decide whether prefill/decode disaggregation, cache policy, expert placement, batching, quantisation, or scheduling improves the relevant frontier. The best optimisation is always conditional on a specific model, hardware fleet, traffic shape, and service promise.
+
 ## 3. Training tokens, inference tokens, and volume
 
 Chinchilla altered training intuition: under a fixed compute budget, model size and training-token count should scale together, and many earlier large models were undertrained. [Hoffmann et al., *Training Compute-Optimal Large Language Models* (2022)](https://arxiv.org/abs/2203.15556) But training-optimal is not deployment-optimal.
