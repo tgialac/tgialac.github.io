@@ -156,7 +156,7 @@ subject to:
 - $P99(\text{ITL}) \le 50\,\text{ms}$;
 - $\text{TPS per user} \ge 40$;
 - $Q \ge Q^{\star}$; and
-- $\text{error rate} \le 0.1\%$.
+- $\text{error rate} \le 0.1\,\text{percent}$.
 
 Or the economic objective may be to minimise cost per million tokens subject to the same quality and service constraints:
 
