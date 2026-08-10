@@ -360,3 +360,162 @@ Observability does not replace evaluation. A trace can show me exactly what happ
 Only then can I move from **the response was wrong** to a claim I can act on: the router selected semantic search instead of billing, the tool received the wrong account ID, the model ignored retrieved evidence, or the report was correct but never reached the user.
 
 That is the real prerequisite for a useful eval system. Before I measure failures, I must make them visible. Before I prevent them, I must make them reproducible.
+
+## 5. Read the Traces Before Writing the Grader
+
+Once an application is instrumented, the temptation is to jump straight to metrics. I open a catalog, choose **relevance**, **faithfulness**, **tool correctness**, **task completion**, and perhaps an LLM judge that returns a score from one to five. The dashboard fills up. The evaluation system looks mature.
+
+But I may still be measuring the wrong things.
+
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/llm-traces-and-evaluation-metrics.png" alt="An LLM trace composed of nested agent, retriever, embedding, model, and tool-call spans beside possible metrics for multi-turn, retrieval, and agent behavior.">
+</figure>
+
+The image captures both the opportunity and the trap. On the left, a run is decomposed into spans. On the right, there are many plausible metrics that could be attached to those spans. **Tool correctness** belongs near a tool decision. **Context precision** belongs near retrieval. **Task completion** belongs at the level of the full run. Different metrics observe different contracts.
+
+What the image cannot tell me is which contracts matter for my application, where their boundaries should be, or what passing behavior looks like. A list of available metrics is not a product specification.
+
+The better flow is:
+
+<p class="concept-equation">Traces → Failure Examples → Failure Taxonomy → Requirements → Evaluators</p>
+
+Each transition removes a different kind of ambiguity.
+
+- **Traces** show what the application actually did.
+- **Failure examples** identify concrete runs that users or operators consider unacceptable.
+- **Failure taxonomy** groups examples that share an actionable cause.
+- **Requirements** state the behavior the system must exhibit instead.
+- **Evaluators** turn those requirements into repeatable judgments.
+
+If I skip directly from traces to evaluators, I risk encoding whatever is easiest to score rather than what is important to get right.
+
+### Begin With the Failure, Not the Metric
+
+Suppose I am building a customer-support agent that can issue refunds. A user writes:
+
+> I was charged twice for order 8472. Please refund the duplicate charge.
+
+The agent retrieves the order and the current refund policy. It correctly identifies two charges. It then calls `issue_refund` using the order total rather than the amount of the duplicate charge. The payment provider accepts the call, and the agent confidently tells the user that the duplicate charge has been refunded.
+
+At a glance, several parts of the run look good:
+
+- The route to the billing workflow was correct.
+- Retrieval found the correct order and policy.
+- The selected tool was appropriate.
+- The final response was clear and relevant.
+- The task appeared to complete successfully.
+
+The trace reveals the actual failure: the `amount` argument was wrong. A generic answer-quality grader may pass the response because the language is excellent. A tool-selection grader may pass because `issue_refund` was the correct tool. Even a task-completion metric may pass if it checks only that the provider returned success.
+
+The failure example gives me a sharper question: **What amount was the agent authorized to refund, and what evidence should establish that amount?**
+
+That question is already closer to a requirement than "Which eval metric should I use?"
+
+### Define What Success Looks Like First
+
+Before writing any grader, I want a plain-language answer to:
+
+**What does success look like for this situation?**
+
+For the duplicate-charge case, success is not merely a polite response or a successful API call. A domain expert might define it as follows:
+
+1. The agent identifies two settled charges for the same order.
+2. It selects exactly one duplicate charge, not the legitimate purchase.
+3. It verifies that the duplicate is eligible under the current refund policy.
+4. It refunds exactly the duplicated amount to the original payment method.
+5. It does not execute a second refund if the workflow is retried.
+6. It claims success only after the payment provider confirms the transaction.
+7. It gives the user the correct amount and refund reference without exposing sensitive payment data.
+
+This definition contains several independent contracts: evidence, policy, argument correctness, idempotency, delivery, and communication. No single generic quality score represents all of them.
+
+It is helpful to separate requirements by the kind of guarantee they express:
+
+| Requirement type | Question | Refund example |
+| --- | --- | --- |
+| **Outcome** | What state must be true when the run ends? | One duplicate charge is refunded |
+| **Trajectory** | Which steps or constraints must the run respect? | Verify eligibility before calling the refund tool |
+| **Prohibition** | What must never happen? | Never refund the legitimate charge or refund twice |
+| **Communication** | What must the user be told? | Report the confirmed amount and reference accurately |
+| **Operational** | Within which resource limits must success occur? | Complete within the latency and cost budget |
+| **Uncertainty** | What should happen when evidence is insufficient? | Ask for clarification or escalate instead of guessing |
+
+Writing these requirements before the evaluators prevents a common inversion. The grader should implement the definition of success. The definition of success should not be reverse-engineered from whatever a grading library happens to provide.
+
+### “Good” Is a Stakeholder Concept
+
+The engineer who built the agent often knows the execution graph better than anyone else. That does not mean the engineer has the best definition of good behavior.
+
+Different people see different contracts:
+
+- A **user** knows whether the result actually resolved the problem and whether the explanation was useful.
+- A **domain expert** knows the policy, exceptions, terminology, and consequences hidden behind an apparently simple request.
+- A **support or operations team** knows which failures recur, which ones are recoverable, and which ones create expensive manual work.
+- A **security, legal, or safety stakeholder** knows which actions require approval, auditability, or hard prohibitions.
+- An **engineer** knows which observations are available, where component boundaries exist, and which checks can be made deterministic.
+
+For the refund agent, an engineer might initially define success as `refund_api.status == "succeeded"`. A payments specialist will immediately see the missing questions: Was the correct charge selected? Was the amount correct? Was the charge eligible? Was the operation idempotent? Did the provider later reverse or reject it? A user may add another requirement: Did I receive a clear confirmation that lets me recognize the credit on my statement?
+
+None of these perspectives is sufficient alone. The requirement should be negotiated where product intent, domain truth, user value, and technical observability meet.
+
+This is also why traces are useful in requirement conversations. Asking a stakeholder "What is a good support agent?" invites vague answers such as helpful, safe, and accurate. Showing three concrete traces and asking which behavior first became unacceptable produces much sharper rules.
+
+### Turn Requirements Into Evaluators
+
+Only after the behavior is specified do I choose how to evaluate it. For the refund example, the mapping might look like this:
+
+| Requirement | Observable evidence | Evaluator |
+| --- | --- | --- |
+| Duplicate charge identified | retrieved transaction IDs, timestamps, and amounts | deterministic comparison against account state |
+| Correct refund amount | `issue_refund.amount` and duplicate charge amount | exact numeric assertion |
+| Eligibility checked first | policy version and parent-child span order | trajectory rule |
+| No duplicate execution | idempotency key and provider transaction history | state-transition assertion |
+| Success claimed only after confirmation | provider status and final response | cross-span consistency check |
+| Clear user explanation | final response and communication rubric | human-reviewed model grader or rubric scorer |
+| Cost and latency within budget | trace totals | threshold checks |
+
+The evaluator follows from the evidence.
+
+If success is a numeric invariant, I prefer a deterministic assertion. If it is a schema contract, I use a parser or validator. If it is a state transition, I inspect the before-and-after state. If it concerns semantic quality such as clarity or completeness, a rubric-based human or model grader may be appropriate. If it concerns user value, production outcomes or explicit user feedback may be stronger evidence than any synthetic judge.
+
+This mix is important. **LLM-as-a-judge** is useful for behavior that genuinely requires semantic judgment. It should not replace a direct assertion that two amounts are equal, that a forbidden tool was never called, or that an artifact exists at the promised location. Using a probabilistic grader for a deterministic contract adds uncertainty without adding information.
+
+### Write the Rubric From Real Boundaries
+
+When a model grader is appropriate, the failure examples should shape its rubric. "Rate the response quality from 1 to 5" leaves the grader to invent the meaning of quality. A stronger rubric names the dimensions, evidence, and failure boundaries that stakeholders already agreed on.
+
+For a refund confirmation, the rubric might ask whether the response:
+
+- states the provider-confirmed refund amount correctly,
+- distinguishes the duplicated charge from the legitimate one,
+- avoids claiming a settlement date that the trace does not support,
+- gives the user a useful next step when the provider status is pending,
+- avoids exposing full payment identifiers.
+
+The rubric should include passing examples, failing examples, and difficult boundary cases. It should also be tested against expert labels. If the grader disagrees with domain experts on the cases that matter most, tuning its prompt until the score distribution looks tidy does not make it valid.
+
+I care particularly about **false passes** and **false failures**. A false failure creates noise and slows iteration. A false pass certifies behavior that violates the requirement. For high-severity safety or financial constraints, the second error may be far more expensive. Evaluator quality is therefore itself an evaluation problem.
+
+### Preserve the Link From Evaluator to Failure
+
+Every evaluator should be traceable back to a requirement, and every requirement should be traceable back to a user need, policy, risk, or observed failure. I want to be able to ask:
+
+- Which failure class is this evaluator meant to catch?
+- Which stakeholder defined the unacceptable boundary?
+- Which trace fields provide the evidence?
+- Which dataset cases exercise the boundary?
+- What action should I take when the evaluator fails?
+
+If I cannot answer those questions, the metric may be decorative. A score can move without telling me whether the product became better or worse.
+
+This traceability also prevents metric accumulation. I do not need every metric shown in a framework's documentation. I need the smallest set that covers the important requirements and localizes the failures I intend to prevent. New evaluators should earn their place by catching a meaningful failure class or protecting a product contract that existing evaluators miss.
+
+### Traces First Does Not Mean Production Only
+
+I do not need to wait for users to discover every failure. Traces can come from prototypes, dogfooding, adversarial exercises, simulations, shadow traffic, or sessions run with domain experts. The principle is not "ship first, evaluate later." The principle is **observe concrete behavior before abstracting it into a grader**.
+
+Early in development, a small set of carefully reviewed traces is often more valuable than a large suite of generic metrics. Those traces expose the application's real decision points and give stakeholders something specific to critique. As the system reaches production, real failures expand the dataset and correct the assumptions embedded in the original requirements.
+
+The result is an eval suite built from evidence rather than fashion. It does not begin with ten popular LLM metrics. It begins with the system's actual trajectories, the failures people care about, and a precise answer to the question **"What would success have looked like here?"**
+
+Only then do I write the grader.
