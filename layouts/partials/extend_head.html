@@ -9,6 +9,11 @@
     {left: '\\[', right: '\\]', display: true}
   ]});"></script>
 {{- end }}
+{{- if and .IsPage (eq .Section "posts") }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400..800&display=swap">
+{{- end }}
 
 <style>
 .main:has(> .post-single) {
@@ -16,9 +21,9 @@
 }
 
 .post-single {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 20px;
-  line-height: 1.65;
+  font-family: "EB Garamond", Georgia, serif;
+  font-size: 1.15rem;
+  line-height: 1.6;
 }
 
 .list {
@@ -70,14 +75,15 @@
 }
 
 .post-title {
-  font-size: clamp(2.5rem, 4vw, 3.25rem);
-  line-height: 1.15;
-  letter-spacing: -0.025em;
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: normal;
 }
 
 .post-content {
-  font-size: 1.1rem;
-  line-height: 1.7;
+  font-size: 1em;
+  line-height: 1.6;
 }
 
 .post-content h2 {
@@ -140,15 +146,15 @@
 
 @media (max-width: 700px) {
   .post-single {
-    font-size: 18px;
+    font-size: 1.05rem;
   }
 
   .post-title {
-    font-size: 2.25rem;
+    font-size: 1.5em;
   }
 
   .post-content {
-    font-size: 1rem;
+    font-size: 1em;
   }
 
   .post-content .katex-display {
