@@ -47,7 +47,6 @@ An AI application has a larger boundary. The model is one component inside it, n
 
 <figure class="article-figure article-figure-plain">
   <img src="/images/illustrations/agent-application-boundary.png" alt="An input flows into an agent and then to an output, while the agent interacts with model calls, retrieval, tools, skills, and state.">
-  <figcaption>Figure 1. The application is the complete system between input and output, not just the model call.</figcaption>
 </figure>
 
 This boundary matters. Suppose I replace the model but keep the prompt, tools, and retrieval pipeline fixed. That is one application change. Suppose I keep the model but change a tool schema, add a skill, update the search index, or shorten the context window. Those are application changes too. Any of them can alter the final answer, the path taken to reach it, or both.
@@ -92,7 +91,6 @@ That test turns a vague instruction into a behavior I can detect. Once the failu
 
 <figure class="article-figure article-figure-plain">
   <img src="/images/illustrations/eval-task-dataset-scorer.png" alt="An eval branches into Task, Dataset, and Scorer, representing the system being run, the situations being tested, and the definition of success.">
-  <figcaption>Figure 2. Every eval must identify the system, the situations, and the definition of success.</figcaption>
 </figure>
 
 This is more than a convenient API shape. It is a compact specification for what an eval result actually means.
