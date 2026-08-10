@@ -20,12 +20,12 @@
 }
 
 .logo a {
-  font-size: 2rem;
+  font-size: calc(2rem + 3px);
   font-weight: 600;
 }
 
 .menu a {
-  font-size: 1.2rem;
+  font-size: calc(1.2rem + 3px);
   font-weight: 500;
 }
 
@@ -35,7 +35,7 @@
 
 .post-single {
   font-family: "EB Garamond", Georgia, serif;
-  font-size: 1.4rem;
+  font-size: calc(1.4rem + 3px);
   line-height: 1.6;
 }
 
@@ -88,7 +88,7 @@
 }
 
 .post-title {
-  font-size: 1.9em;
+  font-size: calc(2.66rem + 3px);
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: normal;
@@ -96,12 +96,12 @@
 
 .post-meta,
 .breadcrumbs {
-  font-size: 1rem;
+  font-size: calc(1rem + 3px);
 }
 
 .breadcrumbs a,
 details.toc summary {
-  font-size: 1.05rem;
+  font-size: calc(1.05rem + 3px);
 }
 
 .post-content {
@@ -110,11 +110,11 @@ details.toc summary {
 }
 
 .post-content h2 {
-  font-size: 1.6em;
+  font-size: calc(2.24rem + 3px);
 }
 
 .post-content h3 {
-  font-size: 1.35em;
+  font-size: calc(1.89rem + 3px);
 }
 
 .post-content .concept-equation {
@@ -187,19 +187,27 @@ details.toc summary {
 
 @media (max-width: 700px) {
   .logo a {
-    font-size: 1.7rem;
+    font-size: calc(1.7rem + 3px);
   }
 
   .menu a {
-    font-size: 1.05rem;
+    font-size: calc(1.05rem + 3px);
   }
 
   .post-single {
-    font-size: 1.2rem;
+    font-size: calc(1.2rem + 3px);
   }
 
   .post-title {
-    font-size: 1.75em;
+    font-size: calc(2.1rem + 3px);
+  }
+
+  .post-content h2 {
+    font-size: calc(1.92rem + 3px);
+  }
+
+  .post-content h3 {
+    font-size: calc(1.62rem + 3px);
   }
 
   .post-content {
