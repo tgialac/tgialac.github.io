@@ -153,9 +153,7 @@ The question "Does the agent work?" is too underspecified to test. The better qu
 
 The mental model behind a conventional unit test is powerful because it is small. I provide an input, execute a function, and compare the actual result with an expected result:
 
-```text
-assert application(x) == expected_output
-```
+<p class="concept-equation">application(x) = expected_output</p>
 
 This assumes that the unit has a stable boundary, that its behavior can be isolated, and that I know what the correct output should be. When the assertion fails, the location of the test usually gives me a useful starting point. The tested function, or one of its direct dependencies, violated a relatively local contract.
 
@@ -163,25 +161,25 @@ Unit tests remain valuable inside an AI application. I still want them for parse
 
 An agent run is closer to a sequence of decisions over changing state:
 
-```text
-input x
-   ↓
-router
-   ↓
-skill?
-   ↓
-tool A
-   ↓
-tool result
-   ↓
-retrieval
-   ↓
-model
-   ↓
-tool B
-   ↓
-final response
-```
+<div class="agent-trace" role="img" aria-label="A trace from input through routing, skill selection, tools, retrieval, and model calls to the final response.">
+  <span class="agent-trace-node agent-trace-boundary">input x</span>
+  <span class="agent-trace-arrow">↓</span>
+  <span class="agent-trace-node agent-trace-decision">router</span>
+  <span class="agent-trace-arrow">↓</span>
+  <span class="agent-trace-node agent-trace-decision">skill?</span>
+  <span class="agent-trace-arrow">↓</span>
+  <span class="agent-trace-node agent-trace-action">tool A</span>
+  <span class="agent-trace-arrow">↓</span>
+  <span class="agent-trace-node agent-trace-context">tool result</span>
+  <span class="agent-trace-arrow">↓</span>
+  <span class="agent-trace-node agent-trace-context">retrieval</span>
+  <span class="agent-trace-arrow">↓</span>
+  <span class="agent-trace-node agent-trace-decision">model</span>
+  <span class="agent-trace-arrow">↓</span>
+  <span class="agent-trace-node agent-trace-action">tool B</span>
+  <span class="agent-trace-arrow">↓</span>
+  <span class="agent-trace-node agent-trace-boundary">final response</span>
+</div>
 
 This sequence is not necessarily fixed. The router may select a different branch. A skill may or may not activate. The model may decide that no tool is needed, call several tools, retry one of them, or stop early. State created at one step becomes context for the next. What looks like a pipeline in a single trace is one realized path through a larger graph of possible actions.
 
@@ -201,9 +199,7 @@ If I ask an agent to summarize an incident report, two responses can use differe
 
 An exact-match assertion treats harmless variation as failure:
 
-```text
-actual_output == one_reference_output
-```
+<p class="concept-equation">actual_output = one_reference_output</p>
 
 That is too narrow when correctness belongs to a set of acceptable behaviors rather than a single string. The evaluation needs an **acceptance region**. An output may vary, but it must remain inside constraints such as factual correctness, policy compliance, groundedness, required format, or task completion.
 

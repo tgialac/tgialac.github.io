@@ -22,8 +22,8 @@
 
 .post-single {
   font-family: "EB Garamond", Georgia, serif;
-  font-size: 1.15rem;
-  line-height: 1.6;
+  font-size: 1.3rem;
+  line-height: 1.62;
 }
 
 .list {
@@ -75,23 +75,72 @@
 }
 
 .post-title {
-  font-size: 1.5em;
+  font-size: 1.8em;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.2;
   letter-spacing: normal;
 }
 
 .post-content {
   font-size: 1em;
-  line-height: 1.6;
+  line-height: 1.62;
 }
 
 .post-content h2 {
-  font-size: 1.75em;
+  font-size: 1.6em;
 }
 
 .post-content h3 {
-  font-size: 1.35em;
+  font-size: 1.3em;
+}
+
+.post-content .concept-equation {
+  margin: 1.75rem auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.95em;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.post-content .agent-trace {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  margin: 2rem auto 2.5rem;
+}
+
+.post-content .agent-trace-node {
+  min-width: 12rem;
+  max-width: 100%;
+  padding: 0.45rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--primary);
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.post-content .agent-trace-boundary {
+  background: rgba(79, 160, 230, 0.16);
+}
+
+.post-content .agent-trace-decision {
+  background: rgba(244, 129, 129, 0.16);
+}
+
+.post-content .agent-trace-action {
+  background: rgba(244, 186, 71, 0.16);
+}
+
+.post-content .agent-trace-context {
+  background: rgba(79, 190, 116, 0.16);
+}
+
+.post-content .agent-trace-arrow {
+  color: var(--secondary);
+  font-size: 1.1rem;
+  line-height: 1;
 }
 
 .post-content .katex-display,
@@ -156,11 +205,11 @@
 
 @media (max-width: 700px) {
   .post-single {
-    font-size: 1.05rem;
+    font-size: 1.15rem;
   }
 
   .post-title {
-    font-size: 1.5em;
+    font-size: 1.65em;
   }
 
   .post-content {
