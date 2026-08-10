@@ -45,7 +45,7 @@ At the simplest level, an **application** is a system that receives an input and
 
 An AI application has a larger boundary. The model is one component inside it, not the application itself. Between input and output, the system may make several model calls, retrieve documents, select skills, invoke tools, read and update state, apply policies, retry failed steps, and decide when to stop. The orchestration code that connects those operations is part of the behavior too.
 
-<figure class="article-figure">
+<figure class="article-figure article-figure-plain">
   <img src="/images/illustrations/agent-application-boundary.png" alt="An input flows into an agent and then to an output, while the agent interacts with model calls, retrieval, tools, skills, and state.">
   <figcaption>Figure 1. The application is the complete system between input and output, not just the model call.</figcaption>
 </figure>
@@ -90,7 +90,7 @@ That test turns a vague instruction into a behavior I can detect. Once the failu
 
 **Eval = Task + Dataset + Scorer**
 
-<figure class="article-figure">
+<figure class="article-figure article-figure-plain">
   <img src="/images/illustrations/eval-task-dataset-scorer.png" alt="An eval branches into Task, Dataset, and Scorer, representing the system being run, the situations being tested, and the definition of success.">
   <figcaption>Figure 2. Every eval must identify the system, the situations, and the definition of success.</figcaption>
 </figure>
