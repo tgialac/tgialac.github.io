@@ -247,3 +247,116 @@ A useful agent eval should therefore answer three questions:
 3. **If not, at which step did behavior first diverge from the contract?**
 
 That final question is what turns evaluation from judgment into debugging. A score tells me that something went wrong. A trace with step-level evals tells me where to start fixing it.
+
+## 4. Observability Before Evaluation
+
+**I cannot design a useful test suite for behavior I have never observed.**
+
+Before I decide how to score an agent, I need to see what the application actually does. Not what the architecture diagram says it should do. Not what the final response claims it did. I need a record of the concrete path taken by a real run, including the decisions, external calls, state transitions, errors, latency, and cost that disappeared behind the final answer.
+
+Consider a research agent asked to compare three competitors and save the finished report to a shared workspace. The agent searches the right sources, retrieves relevant documents, resolves conflicting claims, and generates a strong report. It then calls the file-writing tool with the correct content and a plausible destination. The operating system rejects the write because the service account lacks permission for that directory. No report appears in the workspace.
+
+From the user's perspective, the task failed. If the only recorded output is an empty artifact or a generic message such as "I could not complete the request," I might conclude that the model failed to research or write the report. I might change the prompt, replace the model, add more documents, or rewrite the synthesis scorer. None of those changes touches the actual defect.
+
+The research was correct. The synthesis was correct. The failure occurred in the **delivery layer**.
+
+This distinction is easy to miss because the final output compresses an entire execution into one symptom. **The response was wrong** is an observation about the boundary of the application. It is not a root cause.
+
+### Trace the Run, Span by Span
+
+[OpenTelemetry defines a trace](https://opentelemetry.io/docs/concepts/signals/traces/) as the path a request takes through an application. For an agent, I can think of a **trace** as the record of one complete run, from the arrival of the user's request to the final response or action.
+
+A **span** represents one operation inside that run. A routing decision can be a span. So can a retrieval call, model generation, tool invocation, database query, policy check, or artifact delivery. Spans share a trace identifier and use parent-child relationships to preserve causality. Together, they reconstruct not only what happened, but in what order and under which parent operation.
+
+The report failure might produce a trace like this:
+
+| Span | Useful observations | Status |
+| --- | --- | --- |
+| **Agent run** | request ID, application version, input, total latency, total cost | Failed |
+| **Route request** | selected research workflow, available alternatives | OK |
+| **Retrieve evidence** | queries, document IDs, source metadata, retrieval scores | OK |
+| **Generate report** | model and prompt version, evidence references, token usage | OK |
+| **Write artifact** | tool name, destination path, permission error | Error |
+| **Deliver result** | expected artifact URI, missing artifact | Failed |
+
+Now the diagnosis is different. The first meaningful divergence is the `Write artifact` span. Every preceding contract passed. `Deliver result` failed too, but it is a downstream consequence, not an independent root cause.
+
+This is why the hierarchy matters. A flat collection of logs may tell me that two errors occurred. A trace tells me that one caused the other.
+
+### What a Useful Span Should Contain
+
+A span is useful when it records enough context to explain and compare an operation. The exact fields depend on the component, but I generally want:
+
+- **Identity:** trace ID, span ID, parent span ID, operation name, application version, and environment.
+- **Timing:** start time, end time, latency, retry count, and timeout state.
+- **Inputs and outputs:** the relevant values, safe references to large payloads, or hashes when raw content should not be stored.
+- **Configuration:** model, prompt, tool schema, retrieval index, skill version, and policy version used for the operation.
+- **Decisions:** selected route, activated skills, chosen tool, approval result, stopping reason, and alternatives when the system exposes them.
+- **Operational measurements:** token usage, monetary cost, number of retrieved items, external requests, and cache behavior.
+- **Failure information:** status, structured error type, exception or tool error, and whether the failure was retried or recovered.
+
+[The OpenTelemetry tracing specification](https://opentelemetry.io/docs/specs/otel/trace/api/) describes spans with names, identifiers, parent relationships, timestamps, attributes, events, links, and status. Agent instrumentation extends those general fields with application-specific observations such as tool arguments, retrieved evidence, model usage, and state changes.
+
+More telemetry is not automatically better. A raw dump of every prompt, document, and tool result can leak secrets, personal data, or privileged business information. It can also make traces expensive and difficult to search. I want the **minimum sufficient evidence** needed to reproduce a failure, compare runs, and identify the first broken contract. Sensitive values should be redacted, access-controlled, hashed, or represented by stable references where possible.
+
+I also do not need hidden chain-of-thought to make an agent observable. A model's narrated explanation of why it acted is not a guaranteed record of the mechanism that produced the action. What I need are the observable interfaces around the model: the context supplied, the decision emitted, the tools available, the arguments selected, the results returned, and the state passed forward. Those are the artifacts I can test.
+
+### A Symptom Is Not a Root Cause
+
+Once traces exist, failures can be classified by the first contract that broke. A useful initial taxonomy is:
+
+| Failure class | What went wrong | Evidence to inspect |
+| --- | --- | --- |
+| **Bad data** | Required evidence was missing, stale, corrupted, or incorrect | source version, retrieved records, freshness, coverage |
+| **Bad routing** | The request entered the wrong workflow, skill, or knowledge domain | router input, selected route, alternatives, confidence |
+| **Wrong tool** | The agent chose a capability that could not satisfy the intent | available tools, selected tool, policy constraints |
+| **Wrong arguments** | The tool was appropriate, but its parameters were malformed or semantically wrong | schema validation, entity IDs, filters, paths, amounts |
+| **Bad reasoning** | The necessary evidence was available, but the produced decision or synthesis did not follow from it | supplied context, intermediate decision, unsupported claims |
+| **Bad formatting** | The content was correct but violated a required schema, template, or interface contract | raw response, parser result, validation errors |
+| **Bad delivery** | A correct result was not persisted, transmitted, displayed, or made available to the user | write status, network response, artifact URI, UI state |
+
+These labels are not valuable because they create a perfect ontology. They are valuable because they point to different fixes. Bad data may require index freshness or source validation. Bad routing may require new router examples or a sharper boundary between skills. Wrong arguments may require schema changes or constrained decoding. Bad delivery may require permissions, retries, idempotency, or transactional guarantees.
+
+Calling all of them **model quality failures** destroys that information. It encourages prompt changes even when the prompt is not the broken component.
+
+The first broken span is not always the whole story. A router may choose the wrong branch because metadata upstream was missing. A tool may receive a wrong identifier because entity resolution silently returned an ambiguous match. Root-cause analysis can therefore move backward through the trace until it finds the earliest actionable defect. The important shift is from asking "Which component reported an error?" to asking **"Where did the run first become unable to succeed?"**
+
+### Prioritize Failures by Expected Harm
+
+Observability will usually reveal more failures than a team can fix at once. Counting them is not enough. The most frequent failure is not necessarily the most important one.
+
+<p class="concept-equation">Priority(failure) = Frequency × Severity</p>
+
+**Frequency** is how often the failure occurs within the relevant traffic slice or opportunity for failure. It can be measured as a rate, such as failures per eligible run, rather than a raw count that merely reflects traffic volume.
+
+**Severity** is the consequence when the failure occurs. Depending on the product, it may combine user harm, financial loss, safety impact, privacy exposure, irreversibility, and the cost of recovery.
+
+If frequency is an estimated probability and severity is an estimated cost per occurrence, their product approximates **expected harm**. If I use ordinal scales such as 1 to 5, the result is only a ranking heuristic, not a precise economic quantity. Either way, the formula forces two separate questions: how likely is this failure, and how bad is it when it happens?
+
+Suppose a report agent produces an extra blank line in 15 percent of runs. The defect is common, visible, and low severity. A different agent writes to the wrong customer's workspace in 0.1 percent of runs. That defect is rare, but its privacy and trust consequences are severe. Fixing the formatting issue first because its count is larger would optimize the dashboard rather than the product's risk.
+
+Frequency also needs a denominator. A tool failure seen ten times in one hundred tool calls is different from one seen ten times in one million calls. Severity needs context too. A malformed date in an internal draft is not equivalent to a malformed dosage in a clinical workflow. Useful prioritization is conditional on the population, task, and consequence being measured.
+
+### Observability Is the Dataset Discovery Layer
+
+The deepest connection between observability and evaluation is that traces tell me what belongs in the test suite.
+
+A practical loop looks like this:
+
+1. **Observe** real and staged runs with traces that preserve the important component boundaries.
+2. **Detect** bad outcomes, policy violations, unusual cost, high latency, tool errors, or other signals worth investigating.
+3. **Localize** the first span where the run became unable to satisfy the intended contract.
+4. **Classify** the root cause and estimate its frequency and severity.
+5. **Promote** the trace, or a safely minimized version of it, into a reproducible dataset case.
+6. **Score** both the final outcome and the specific component contract that failed.
+7. **Fix and rerun** the case, then keep it as a regression test.
+
+This loop turns production incidents into durable engineering knowledge. The trace supplies the evidence. The dataset preserves the situation. The scorer encodes the contract. The regression test makes the failure harder to reintroduce.
+
+It also changes how I sample traces. Random samples are useful for estimating common behavior, but rare high-severity failures can disappear inside averages. I want to retain traces triggered by errors, policy violations, unusually high cost, long latency, retries, unexpected tools, and user corrections. These are often the runs with the highest information value for future evals.
+
+Observability does not replace evaluation. A trace can show me exactly what happened without telling me whether that behavior was acceptable. Evaluation does not replace observability either. A failing score can tell me that a contract was violated without showing me why. I need the judgment of an eval and the causal evidence of a trace.
+
+Only then can I move from **the response was wrong** to a claim I can act on: the router selected semantic search instead of billing, the tool received the wrong account ID, the model ignored retrieved evidence, or the report was correct but never reached the user.
+
+That is the real prerequisite for a useful eval system. Before I measure failures, I must make them visible. Before I prevent them, I must make them reproducible.
