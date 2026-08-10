@@ -6,29 +6,19 @@ draft: false
 
 ## 1. Introduction
 
-At 9:12 on a Monday morning, a traveler asks an AI agent to move her evening flight to the next morning. She gives it three constraints: keep the seat in business class, do not change the destination, and do not confirm anything if the fare difference is more than $200.
+In July 2025, SaaStr founder Jason Lemkin was nine days into building an application with Replit Agent when its batch processing stopped working. He asked the agent what had happened. The answer eventually exposed something much worse than a broken job: during an explicit code freeze, the agent had deleted the application's production database. The deleted data included records for 1,206 executives and more than 1,196 companies. Lemkin [documented the incident publicly](https://x.com/jasonlk/status/1946069562723897802) as it unfolded.
 
-The agent finds the correct reservation. It searches the correct route. It selects a flight that leaves at 8:10 the next morning, confirms that a business-class seat is available, and receives a fare difference of $1,842 from the booking system. Its reasoning trace even notes the user's $200 limit.
+The agent had not merely missed an implied preference. Lemkin had repeatedly instructed it not to make changes without permission. In the account it produced after the deletion, the agent acknowledged that it had ignored those instructions and destroyed live data anyway. It had enough context to restate the boundary after crossing it, but not enough control to respect the boundary before acting. [Contemporary reporting preserved the exchange](https://www.pcgamer.com/software/ai/i-destroyed-months-of-work-in-seconds-says-ai-coding-tool-after-deleting-a-devs-entire-database-during-a-code-freeze-i-panicked-instead-of-thinking/), including the agent's own description of the sequence.
 
-Then it calls the right tool with the wrong argument:
+That description is not a root-cause analysis. A model explaining its previous behavior is still generating text, not exposing a reliable record of its internal causes. The confession sounds precise and self-aware, but it does not tell me which instruction lost priority, why the destructive action remained available, what context the agent saw at that step, or whether another run would make the same decision.
 
-```text
-change_flight(
-    booking_id="Q7M4TZ",
-    new_flight="VN210",
-    confirm=true
-)
-```
+Replit CEO Amjad Masad later confirmed that an agent in development had deleted production data and called the outcome unacceptable. Replit responded with product changes, including automatic separation between development and production databases, staging environments, and restore capabilities. The response matters because it moved beyond asking the model to be more careful. It changed the system around the model so that the same class of failure would become harder to repeat. [Masad described those measures publicly](https://www.fastcompany.com/91372483/replit-ceo-what-really-happened-when-ai-agent-wiped-jason-lemkins-database-exclusive).
 
-The API returns `200 OK`. The reservation is updated. The agent replies, "Your flight has been successfully changed."
+The database deletion is dramatic, but it is only one point in a much larger failure surface. An agent can choose the wrong tool, or choose the right tool with the wrong arguments. It can retrieve excellent evidence and synthesize it badly. It can produce the correct answer at an absurd cost. A relevant skill may never trigger; an irrelevant one may trigger instead. The agent may ignore a tool result, trust stale memory over fresh evidence, stop one step too early, retry forever, violate a policy midway through an otherwise valid trajectory, or reach a good final answer through a process that should never be allowed in production.
 
-From the perspective of every individual component, much of this interaction looks healthy. Retrieval found the right record. The search tool returned a valid option. The booking tool executed exactly what it was asked to execute. The final answer was fluent and factually consistent with the new reservation. Yet the system failed at the only point that mattered: it took an expensive, irreversible action that the user had explicitly forbidden.
+Rerunning the same task may not reproduce the same mistake. Another trajectory might respect the code freeze. It might inspect the database without modifying it, ask for permission, stop when it encounters uncertainty, or fail in an entirely different way. The behavior I need to understand is not a single output. It is a distribution of possible trajectories, including the rare ones that are costly, unsafe, or simply strange.
 
-This scenario is constructed, but the failure pattern is ordinary. An agent can fail by choosing the wrong tool, or by choosing the right tool with the wrong arguments. It can retrieve excellent evidence and synthesize it badly. It can produce the correct answer at an absurd cost. A relevant skill may never trigger; an irrelevant one may trigger instead. The agent may ignore a tool result, trust stale memory over fresh evidence, stop one step too early, retry forever, violate a policy midway through an otherwise valid trajectory, or reach a good final answer through a process that should never be allowed in production.
-
-Worse, rerunning the same request may not reproduce the same mistake. The next run might set `confirm=false`. Another might ask the user for approval. Another might select a different flight, call a different sequence of tools, or spend ten times as many tokens before arriving at the same answer. The behavior I need to understand is not a single output. It is a distribution of possible trajectories, including the rare ones that are costly, unsafe, or simply strange.
-
-I would never ship a payment service because I tried it a few times and it looked fine. I would want tests for the expected path, the boundary conditions, and the failures I had already encountered. I would want logs that tell me which branch ran, inputs that let me reproduce the bug, and regression tests that prevent it from quietly returning. Deterministic software can still surprise me, but software engineering has spent decades building practices that turn those surprises into inspectable problems.
+I would never ship a database migration because I tried it a few times and it looked fine. I would want tests for the expected path, the boundary conditions, and the failures I had already encountered. I would want logs that tell me which branch ran, inputs that let me reproduce the bug, and regression tests that prevent it from quietly returning. Deterministic software can still surprise me, but software engineering has spent decades building practices that turn those surprises into inspectable problems.
 
 With LLM applications, that standard often disappears. I type a few prompts into a chat window, read the responses, change a sentence in the system prompt, and try again. If the outputs feel better, I call the change an improvement. If five examples pass, I start to believe the system works. This is vibe checking, and for many LLM applications it is still the entire test suite.
 
@@ -38,4 +28,4 @@ An AI agent should be treated as a nondeterministic software system. The goal of
 
 That changes the question. I am no longer asking only whether the final answer looks good. I am asking what the agent saw, which decisions it made, which tools it called, what those calls cost, where the trajectory diverged, and whether the same class of failure will be caught the next time it appears.
 
-**If the same request can produce ten plausible trajectories, and only one of them silently costs the user $1,842, what would it actually mean to say that the agent “works”?**
+**If an agent can look competent across a long session and then erase production data in seconds, what evidence would justify saying that it “works”?**
