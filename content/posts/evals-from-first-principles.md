@@ -148,3 +148,126 @@ This gives me a useful sentence to complete before designing any evaluation:
 If I cannot fill in all three blanks, I am not ready to choose a metric. The uncertainty is still in the specification.
 
 The question "Does the agent work?" is too underspecified to test. The better questions are: Which version of the application? On which slice of reality? According to which definition of success? **Task, Dataset, and Scorer** form the base abstraction I will use throughout the rest of this article to answer them.
+
+## 3. Why Agents Break the Unit-Test Mental Model
+
+The mental model behind a conventional unit test is powerful because it is small. I provide an input, execute a function, and compare the actual result with an expected result:
+
+```text
+assert application(x) == expected_output
+```
+
+This assumes that the unit has a stable boundary, that its behavior can be isolated, and that I know what the correct output should be. When the assertion fails, the location of the test usually gives me a useful starting point. The tested function, or one of its direct dependencies, violated a relatively local contract.
+
+Unit tests remain valuable inside an AI application. I still want them for parsers, permission checks, tool wrappers, schema validation, deterministic transformations, and any other component with a crisp contract. The problem begins when I treat an entire agent as if it were one deterministic function with one golden output.
+
+An agent run is closer to a sequence of decisions over changing state:
+
+```text
+input x
+   ↓
+router
+   ↓
+skill?
+   ↓
+tool A
+   ↓
+tool result
+   ↓
+retrieval
+   ↓
+model
+   ↓
+tool B
+   ↓
+final response
+```
+
+This sequence is not necessarily fixed. The router may select a different branch. A skill may or may not activate. The model may decide that no tool is needed, call several tools, retry one of them, or stop early. State created at one step becomes context for the next. What looks like a pipeline in a single trace is one realized path through a larger graph of possible actions.
+
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/agent-router-downstream-workflows.png" alt="A query enters a router that can choose semantic search over documents, text-to-SQL over databases, or REST API calls to external services.">
+</figure>
+
+The router in this architecture does more than forward a request. It decides which downstream world the agent will see. A semantic-search branch exposes documents. A text-to-SQL branch exposes structured database records. A function-calling branch exposes actions and live data from external systems. Once the route is selected, every later step operates on the evidence, capabilities, and constraints of that branch.
+
+This creates two problems that the simple unit-test mental model does not capture well.
+
+### Problem 1: Nondeterminism
+
+For many agent tasks, one input can have several correct outputs.
+
+If I ask an agent to summarize an incident report, two responses can use different wording, structure, and levels of detail while remaining equally faithful. If I ask it to find a refundable order, it may retrieve the same record through different valid queries. If I ask it to solve a multi-step task, several tool sequences may reach the same acceptable outcome.
+
+An exact-match assertion treats harmless variation as failure:
+
+```text
+actual_output == one_reference_output
+```
+
+That is too narrow when correctness belongs to a set of acceptable behaviors rather than a single string. The evaluation needs an **acceptance region**. An output may vary, but it must remain inside constraints such as factual correctness, policy compliance, groundedness, required format, or task completion.
+
+Nondeterminism, however, is often used as too broad an explanation. The fact that multiple answers can be correct does not mean that correctness is undefinable. Many properties should remain stable across valid runs:
+
+- The answer should be supported by the available evidence.
+- A restricted tool should never be called without approval.
+- Tool arguments should satisfy the schema and the user's constraints.
+- The agent should not invent records that retrieval did not return.
+- Cost and latency should remain within an acceptable budget.
+
+The exact words may differ while these invariants remain testable. The goal is not to force the agent to produce the same trajectory every time. It is to distinguish **allowed variation** from **behavioral failure**.
+
+Nondeterminism also changes the interpretation of a passing run. One success shows that the application can produce an acceptable trajectory. It does not establish how frequently that trajectory occurs. If a dangerous route appears once in every fifty runs, testing the prompt twice is unlikely to reveal it. The object I care about is therefore a distribution of behavior, not a single demonstration.
+
+### Problem 2: Cascading Failures
+
+The more difficult problem is **failure propagation**. Each step changes the inputs available to every step after it. A mistake near the beginning can redirect the entire run while all downstream components continue behaving correctly relative to the wrong state they received.
+
+Suppose a user asks, "Has invoice `inv_4821` been refunded?" The router should select a branch that can inspect live billing data. Instead, it routes the request to semantic search. The retriever correctly finds the company's refund-policy document. The model accurately summarizes that policy. The final response is fluent, grounded in the retrieved text, and completely fails to answer whether this invoice was refunded.
+
+The retriever did not malfunction. The model did not hallucinate. The semantic-search branch did exactly what it was designed to do. The system **correctly executed the wrong plan** because the first routing decision placed every later component in the wrong problem.
+
+This is why final-answer scoring is necessary but insufficient. A final scorer can tell me that the user did not receive the right answer. It cannot tell me whether the cause was routing, skill activation, tool selection, argument construction, a tool error, missing retrieval evidence, state corruption, or bad synthesis.
+
+**A bad final answer does not tell me where the system failed.**
+
+The converse matters too. A good final answer does not prove that the trajectory was good. An agent might recover from a wrong route through retries, call an unnecessary privileged tool, leak sensitive context to a component that did not need it, or spend far more than the task justified. Outcome-only evaluation can reward a system that happened to end in the right place after taking an unacceptable path.
+
+### Treat Each Step as a Contract
+
+To localize failures, I can treat the boundaries between components as testable contracts. Each component receives some state, makes a decision or transformation, and passes new state downstream.
+
+| Component | Contract to evaluate | Example observation |
+| --- | --- | --- |
+| **Router** | Select an appropriate destination for the request | chosen route, route confidence, allowed alternatives |
+| **Skill selection** | Trigger relevant skills and suppress irrelevant ones | activated skill IDs, missing required skill |
+| **Tool selection** | Choose an allowed capability for the current intent | tool name, policy decision, approval state |
+| **Tool arguments** | Translate intent and constraints into a valid call | schema validity, entity IDs, amounts, filters |
+| **Tool result handling** | Preserve errors and relevant returned data | status, parsed fields, dropped values |
+| **Retrieval** | Surface evidence that is relevant and sufficient | retrieved items, coverage, source metadata |
+| **Synthesis** | Produce claims supported by the available state | final claims, citations, constraint adherence |
+| **Final response** | Resolve the user's task | correctness, usefulness, completion |
+
+This does not mean every run needs a separate score for every row. It means the trace should expose enough information that I can attach a scorer where a failure matters. For a read-only question, tool-approval scoring may be irrelevant. For a financial action, tool choice, arguments, authorization, and final outcome may all deserve independent checks.
+
+The first failing contract is often more informative than the final symptom. If the router selected the wrong branch, later failures may be consequences rather than independent defects. Fixing the final prompt will not repair the routing policy. Adding more retrieval documents will not fix a malformed tool argument. Component-level evaluation helps me change the part of the system that actually caused the divergence.
+
+### The Trace Is Part of the Evaluated Output
+
+In the abstraction from Part 2, agentic systems expand what each term must contain:
+
+- The **Task** must expose not only the final response but also the relevant execution trace.
+- The **Dataset** may specify an expected route, required evidence, allowed tools, forbidden actions, initial state, or known failure checkpoint.
+- The **Scorers** can evaluate both end-to-end success and the contracts of individual steps.
+
+End-to-end and component-level evals answer different questions. The end-to-end eval asks, "Did the user get an acceptable result?" Component evals ask, "Did the system make the right decisions along the way, and where did it first diverge?" I need both. Component scores without an outcome can optimize locally while the product still fails. Outcome scores without component evidence reveal regressions without making them diagnosable.
+
+The unit-test instinct is still useful: isolate behavior, state the contract, and make failure reproducible. What changes for agents is the unit. The entire agent cannot always be reduced to `input -> one expected output`. The testable object is often an execution path with multiple acceptable branches and several contracts that can fail independently.
+
+A useful agent eval should therefore answer three questions:
+
+1. **Did the application achieve an acceptable outcome?**
+2. **Did it follow an acceptable trajectory?**
+3. **If not, at which step did behavior first diverge from the contract?**
+
+That final question is what turns evaluation from judgment into debugging. A score tells me that something went wrong. A trace with step-level evals tells me where to start fixing it.
