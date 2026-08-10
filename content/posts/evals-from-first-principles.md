@@ -159,27 +159,7 @@ This assumes that the unit has a stable boundary, that its behavior can be isola
 
 Unit tests remain valuable inside an AI application. I still want them for parsers, permission checks, tool wrappers, schema validation, deterministic transformations, and any other component with a crisp contract. The problem begins when I treat an entire agent as if it were one deterministic function with one golden output.
 
-An agent run is closer to a sequence of decisions over changing state:
-
-<div class="agent-trace" role="img" aria-label="A trace from input through routing, skill selection, tools, retrieval, and model calls to the final response.">
-  <span class="agent-trace-node agent-trace-boundary">input x</span>
-  <span class="agent-trace-arrow">↓</span>
-  <span class="agent-trace-node agent-trace-decision">router</span>
-  <span class="agent-trace-arrow">↓</span>
-  <span class="agent-trace-node agent-trace-decision">skill?</span>
-  <span class="agent-trace-arrow">↓</span>
-  <span class="agent-trace-node agent-trace-action">tool A</span>
-  <span class="agent-trace-arrow">↓</span>
-  <span class="agent-trace-node agent-trace-context">tool result</span>
-  <span class="agent-trace-arrow">↓</span>
-  <span class="agent-trace-node agent-trace-context">retrieval</span>
-  <span class="agent-trace-arrow">↓</span>
-  <span class="agent-trace-node agent-trace-decision">model</span>
-  <span class="agent-trace-arrow">↓</span>
-  <span class="agent-trace-node agent-trace-action">tool B</span>
-  <span class="agent-trace-arrow">↓</span>
-  <span class="agent-trace-node agent-trace-boundary">final response</span>
-</div>
+An agent run is closer to a sequence of decisions over changing state. An input first reaches a router, which may activate a skill and call a tool. The tool result can trigger retrieval, another model decision, and another tool call before the application finally produces a response.
 
 This sequence is not necessarily fixed. The router may select a different branch. A skill may or may not activate. The model may decide that no tool is needed, call several tools, retry one of them, or stop early. State created at one step becomes context for the next. What looks like a pipeline in a single trace is one realized path through a larger graph of possible actions.
 
