@@ -11,6 +11,16 @@
 {{- end }}
 
 <style>
+:root {
+  --main-width: 1400px;
+}
+
+body {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  line-height: 1.65;
+}
+
 .list {
   background: var(--theme);
 }
@@ -58,11 +68,25 @@
 .list .post-entry:hover .entry-header h2 {
   text-decoration: none;
 }
-.header .menu,
-.header .menu a,
-.header .menu a span {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+.post-title {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
 }
+
+.post-content {
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.post-content h2 {
+  font-size: 1.75em;
+}
+
+.post-content h3 {
+  font-size: 1.35em;
+}
+
 .post-content .katex-display,
 .post-content table {
   max-width: 100%;
@@ -114,6 +138,18 @@
 }
 
 @media (max-width: 700px) {
+  body {
+    font-size: 18px;
+  }
+
+  .post-title {
+    font-size: 2.25rem;
+  }
+
+  .post-content {
+    font-size: 1rem;
+  }
+
   .post-content .katex-display {
     text-align: left;
   }
