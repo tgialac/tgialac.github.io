@@ -11,11 +11,11 @@
 {{- end }}
 
 <style>
-:root {
-  --main-width: 1400px;
+.main:has(> .post-single) {
+  max-width: calc(1040px + var(--gap) * 2);
 }
 
-body {
+.post-single {
   font-family: Georgia, "Times New Roman", serif;
   font-size: 20px;
   line-height: 1.65;
@@ -68,8 +68,9 @@ body {
 .list .post-entry:hover .entry-header h2 {
   text-decoration: none;
 }
+
 .post-title {
-  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-size: clamp(2.5rem, 4vw, 3.25rem);
   line-height: 1.15;
   letter-spacing: -0.025em;
 }
@@ -138,7 +139,7 @@ body {
 }
 
 @media (max-width: 700px) {
-  body {
+  .post-single {
     font-size: 18px;
   }
 
