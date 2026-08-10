@@ -9,21 +9,34 @@
     {left: '\\[', right: '\\]', display: true}
   ]});"></script>
 {{- end }}
-{{- if and .IsPage (eq .Section "posts") }}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400..800&display=swap">
-{{- end }}
 
 <style>
+.header-nav {
+  max-width: calc(1040px + var(--gap) * 2);
+  font-family: "EB Garamond", Georgia, serif;
+}
+
+.logo a {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.menu a {
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
 .main:has(> .post-single) {
   max-width: calc(1040px + var(--gap) * 2);
 }
 
 .post-single {
   font-family: "EB Garamond", Georgia, serif;
-  font-size: 1.3rem;
-  line-height: 1.62;
+  font-size: 1.4rem;
+  line-height: 1.6;
 }
 
 .list {
@@ -75,15 +88,38 @@
 }
 
 .post-title {
-  font-size: 1.8em;
+  font-size: 1.9em;
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: normal;
 }
 
+.post-header,
+.post-content > p,
+.post-content > h2,
+.post-content > h3,
+.post-content > h4,
+.post-content > ul,
+.post-content > ol,
+.post-content > blockquote,
+details.toc {
+  max-width: 52rem;
+  margin-inline: auto;
+}
+
+.post-meta,
+.breadcrumbs {
+  font-size: 1rem;
+}
+
+.breadcrumbs a,
+details.toc summary {
+  font-size: 1.05rem;
+}
+
 .post-content {
   font-size: 1em;
-  line-height: 1.62;
+  line-height: 1.6;
 }
 
 .post-content h2 {
@@ -91,7 +127,7 @@
 }
 
 .post-content h3 {
-  font-size: 1.3em;
+  font-size: 1.35em;
 }
 
 .post-content .concept-equation {
@@ -163,12 +199,20 @@
 }
 
 @media (max-width: 700px) {
+  .logo a {
+    font-size: 1.7rem;
+  }
+
+  .menu a {
+    font-size: 1.05rem;
+  }
+
   .post-single {
-    font-size: 1.15rem;
+    font-size: 1.2rem;
   }
 
   .post-title {
-    font-size: 1.65em;
+    font-size: 1.75em;
   }
 
   .post-content {
