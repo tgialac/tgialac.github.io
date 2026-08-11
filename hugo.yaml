@@ -55,6 +55,10 @@ params:
 
   ShowReadingTime: true
   ShowShareButtons: true
+  ShareButtons:
+    - x
+    - linkedin
+    - whatsapp
   ShowPostNavLinks: true
   ShowBreadCrumbs: true
   ShowCodeCopyButtons: true
