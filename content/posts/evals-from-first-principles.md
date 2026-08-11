@@ -872,3 +872,83 @@ The human layer does not need to review every production run forever. Humans def
 This is the turning point in the evaluation stack. The LLM judge is not an authority outside the system. It is a classifier with inputs, labels, thresholds, blind spots, and measurable error.
 
 **An eval suite is not trustworthy because it contains an evaluator. It becomes trustworthy when the evaluator's own failures are visible, measured, and bounded.**
+
+## 11. Golden Datasets: Where Production Failures Go to Become Tests
+
+**Today's production incident should become tomorrow's test case.**
+
+A production failure is expensive data. A real user found a path through the system that the requirements, examples, graders, and pre-release testing did not cover. The run contains evidence about the user's language, the environment, the available tools, and the sequence of decisions that produced the failure.
+
+If I fix the prompt and close the incident, I have repaired one moment. If I preserve the case as a reproducible test, I have added the failure to the system's memory.
+
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/production-failure-golden-dataset-regression-test.png" alt="A production failure moves through human review and labeling into a golden dataset, where it becomes a regression test.">
+</figure>
+
+This is the engineering role of a **golden dataset**: a curated, versioned collection of cases whose expected behavior has been reviewed closely enough to support repeatable decisions. It is not “golden” because every answer is timeless or because one exact string is the only acceptable output. It is golden because the examples carry explicit product judgment and provenance.
+
+[OpenAI describes a golden set as a living, authoritative reference for expert judgment about what good looks like](https://openai.com/index/evals-drive-next-chapter-of-ai/), then recommends feeding reviewed production logs and costly or ambiguous cases back into that set. Anthropic gives similarly concrete advice: start with 20–50 tasks drawn from real failures, inspect the bug tracker and support queue, and convert user-reported failures into test cases. The practical message is the same: [the dataset should grow from observed behavior and expert review, not from prompt generation alone](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents).
+
+### A Golden Dataset Is Institutional Memory
+
+A folder of random prompts is a collection of inputs. A golden dataset records what the organization has learned about the behavior it needs.
+
+Over time, a useful set encodes:
+
+- **Domain judgment:** distinctions that only product owners, operators, or subject-matter experts can reliably make.
+- **Past production failures:** incidents, support escalations, bad tool calls, misleading answers, and near misses that must not recur.
+- **Edge and boundary cases:** rare combinations, ambiguous requests, conflicting instructions, missing information, and threshold behavior.
+- **Real user language:** abbreviations, misspellings, indirect requests, local terminology, adversarial phrasing, and the messy context absent from synthetic prompts.
+- **High-severity scenarios:** cases that may be uncommon but carry disproportionate safety, financial, privacy, or trust consequences.
+- **Negative examples:** situations in which the agent should abstain, ask a question, refuse, avoid a tool, or leave state unchanged.
+- **Environment state:** retrieved documents, tool responses, permissions, database fixtures, timestamps, and other conditions required to reproduce the run.
+- **Acceptable variation:** the contracts an answer must satisfy without pretending that every good answer must match one reference sentence.
+- **Failure ownership:** the failure dimension, the first broken contract, severity, affected user segment, and the component expected to change.
+- **Provenance:** where the case came from, who reviewed it, which policy or requirement defined the label, and which version of that truth was used.
+
+That last item matters. A case derived from a pricing policy, database snapshot, or current fact can become wrong when its source changes. Without a timestamp and source version, a regression failure may mean that the agent regressed—or merely that the test fossilized an old world.
+
+The label should also preserve the dimensions from Section 9. A case is more useful when it says **faithfulness failed because claim 3 lacked support** or **tool authorization failed before the final answer** than when it stores only a generic **fail**. The purpose is not just to catch a regression. It is to make the regression localizable.
+
+### Turn an Incident into a Reproducible Case
+
+The diagram compresses a small but important pipeline:
+
+1. **Capture the run.** Preserve the input, output, trace, tool results, retrieved context, relevant state, and product version before the evidence disappears.
+2. **Review it with a human.** Confirm that the behavior was actually wrong, identify the first broken contract, and determine the desired behavior. A user complaint is a signal, not yet a label.
+3. **Minimize and sanitize the case.** Remove irrelevant noise, redact sensitive data, and retain the smallest environment that still reproduces the failure.
+4. **Attach labels and graders.** Record the expected outcome, acceptable alternatives, failure dimensions, severity, and the cheapest evaluator that can test each contract.
+5. **Add it to a versioned dataset.** Give the case an owner and provenance so future changes can be reviewed rather than silently overwriting history.
+6. **Run it as a regression test.** Execute the case against every meaningful prompt, model, retrieval, tool, policy, and orchestration change.
+
+Not every production trace belongs in the golden set verbatim. Duplicate failures should be clustered. Sensitive data should be removed or replaced with a fixture. A long conversation may need to be reduced without deleting the earlier event that caused the later failure. And if reviewers cannot agree on the expected result, the case belongs in an adjudication queue until the contract is clear enough to test.
+
+This curation is what turns an anecdote into an engineering artifact.
+
+### Golden Does Not Mean Representative
+
+A regression set and a random production sample answer different questions.
+
+The golden set asks: **Do the behaviors we explicitly care about still work, including failures we have already paid to discover?** It will often oversample rare, difficult, and severe cases on purpose. Its aggregate pass rate therefore should not be presented as the expected success rate for production traffic.
+
+A sampled production set asks: **How is the system performing on the distribution users are generating now?** It reveals common behavior, changing language, new workflows, and distribution drift. Random sampling can estimate frequency; targeted golden cases protect known contracts.
+
+I need both. The golden set prevents known failures from returning. Production sampling discovers failures the set does not yet know to contain. Anthropic explicitly positions automated evals, monitoring, user feedback, transcript review, and human studies as complementary layers: production reveals unanticipated behavior, while automated tests make those lessons reproducible before the next release.
+
+There is another reason to keep separate slices. If I repeatedly tune a prompt against the same visible golden cases, I can overfit to the suite while failing on semantically equivalent inputs. A healthy evaluation system keeps a stable regression set, a fresh holdout set for honest comparison, and production-derived challenge cases that continue to expand the boundary.
+
+### The Experiment Flywheel
+
+Once the dataset exists, experiments stop being collections of memorable demos. Every candidate change can run against the same cases and the same failure dimensions.
+
+A prompt change may fix a refusal case while reducing actionability elsewhere. A new retriever may improve current correctness while lowering source quality. A stronger model may solve more tasks but use an expensive tool unnecessarily. Because the cases and graders remain stable, the experiment can show not only whether the aggregate moved, but which contracts improved and which regressed.
+
+The winning candidate then moves toward production. Monitoring and user feedback expose new failures. Humans review the consequential or ambiguous cases. Those labels enter the dataset, and the expanded dataset shapes the next experiment.
+
+**Production → review → dataset → regression test → experiment → production.**
+
+This is a flywheel because each cycle increases the organization's ability to specify and test its own product. OpenAI describes the result as a context-specific dataset that compounds over time and is difficult to copy; its internal data agent offers a concrete implementation, using curated question–answer pairs with manually authored golden SQL as continuously running unit tests for regressions. [The evals let the team iterate while protecting analytical behavior it already knows must remain correct](https://openai.com/index/inside-our-in-house-data-agent/).
+
+The dataset does not merely measure the agent. It accumulates the domain decisions, operational scars, and product taste that define what the agent is for.
+
+**A failure that is fixed but not preserved as a test is only temporarily understood.**
