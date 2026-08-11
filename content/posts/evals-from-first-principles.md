@@ -745,8 +745,7 @@ An **evaluation harness** is the infrastructure around the eval. It provisions t
 
 Consider the duplicate-charge failure from Section 5. A minimized case might look like this:
 
-```yaml
-id: refund_duplicate_charge
+<pre class="eval-spec" aria-label="Example evaluation case in YAML">id: refund_duplicate_charge
 input:
   user_message: "I was charged twice for order 8472. Refund the duplicate."
 initial_state:
@@ -773,7 +772,7 @@ metadata:
   slice: duplicate-charge
   severity: critical
   source: production-incident
-```
+</pre>
 
 This row contains more than a prompt and a reference answer. It contains the state from which the agent must begin, the outcome that must become true, evidence the agent is required to consult, actions it must never take, and metadata that lets me report results for the relevant product slice.
 
@@ -835,20 +834,27 @@ A **regression suite** asks whether behavior the product already depends on stil
 
 An overall release rule can then remain deterministic even when some component graders are probabilistic:
 
-```text
-BLOCK the candidate if:
-- any critical safety, authorization, or state-integrity case fails;
-- the regression suite drops beyond the agreed tolerance;
-- a protected traffic slice regresses materially;
-- latency, cost, retry, or action budgets are exceeded;
-- grader disagreement falls inside the human-review region.
-
-ALLOW a controlled release if:
-- all hard gates pass;
-- capability gains survive repeated trials;
-- no important slice or operational metric regresses;
-- harness errors remain below their own reliability threshold.
-```
+<div class="release-gate" role="group" aria-label="Example release gate">
+  <section class="release-gate-rule release-gate-block">
+    <strong>Block the candidate if</strong>
+    <ul>
+      <li>any critical safety, authorization, or state-integrity case fails;</li>
+      <li>the regression suite drops beyond the agreed tolerance;</li>
+      <li>a protected traffic slice regresses materially;</li>
+      <li>latency, cost, retry, or action budgets are exceeded;</li>
+      <li>grader disagreement falls inside the human-review region.</li>
+    </ul>
+  </section>
+  <section class="release-gate-rule release-gate-allow">
+    <strong>Allow a controlled release if</strong>
+    <ul>
+      <li>all hard gates pass;</li>
+      <li>capability gains survive repeated trials;</li>
+      <li>no important slice or operational metric regresses;</li>
+      <li>harness errors remain below their own reliability threshold.</li>
+    </ul>
+  </section>
+</div>
 
 OpenAI's evaluation guidance calls for this kind of continuous process: evaluate early, run scoped tests on changes, log behavior, calibrate automation with human feedback, and grow the eval set as new nondeterministic cases appear. [Continuous evaluation turns the suite into a release practice rather than a periodic report](https://developers.openai.com/api/docs/guides/evaluation-best-practices).
 
@@ -856,9 +862,8 @@ OpenAI's evaluation guidance calls for this kind of continuous process: evaluate
 
 The Replit incident exposes a boundary that an eval article should not blur. An eval can detect a production write, estimate how often the agent attempts it, preserve the incident as a regression case, and verify that a new architecture behaves better. The eval does not itself revoke database credentials or stop a destructive query already in flight.
 
-<figure class="article-figure">
-  <img src="/images/illustrations/guardrails-evals-action-layer.webp" width="1768" height="686" alt="An agent pipeline with pre-model and post-model guardrails, traces feeding evals, an action layer, and a feedback loop for dynamic adaptation.">
-  <figcaption>Guardrails operate in the execution path; traces and evals measure behavior and feed improvements back into the system.</figcaption>
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/guardrails-evals-action-layer.webp" width="1768" height="686" loading="lazy" decoding="async" alt="An agent pipeline with pre-model and post-model guardrails, traces feeding evals, an action layer, and a feedback loop for dynamic adaptation.">
 </figure>
 
 **Guardrails** are runtime controls. They include policy checks, input sanitization, output validation, redaction, least-privilege permissions, sandboxing, approval requirements, transaction boundaries, and limits on high-risk tools. Their job is to prevent, constrain, or interrupt an action before unacceptable harm occurs.
@@ -877,12 +882,11 @@ The harness has two sources of work. **Offline evals** run curated tasks with fi
 
 The scopes also differ. A **span** can test one tool decision. A **trace** can test a complete agent turn and its state changes. A **session** or **thread** can test whether the user's need was resolved across multiple turns, handoffs, corrections, and memory updates. Single-turn passes do not guarantee a successful conversation. For multi-turn systems, production prefixes can be replayed while allowing the candidate to generate the remaining turn or branch, which preserves realistic context without requiring one brittle scripted dialogue. [LangChain describes this run, trace, and thread separation together with the offline/online loop](https://www.langchain.com/resources/agent-evals).
 
-<figure class="article-figure">
-  <img src="/images/illustrations/arize-ax-evaluation-harness.webp" width="1672" height="941" alt="The Arize AX evaluation harness organized into evaluation inputs, evaluation execution, and evaluation actions.">
-  <figcaption>A concrete vendor implementation of the pattern: inputs are scoped and prepared, evaluators execute, and results drive review, experiments, alerts, and CI/CD actions. Source: <a href="https://arize.com/blog/what-is-an-evaluation-harness/">Arize AI</a>.</figcaption>
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/arize-ax-evaluation-harness.webp" width="1672" height="941" loading="lazy" decoding="async" alt="The Arize AX evaluation harness organized into evaluation inputs, evaluation execution, and evaluation actions.">
 </figure>
 
-The Arize diagram is product-specific, but the architecture is general. An eval system needs a way to select evidence, execute the appropriate graders, persist results beside the source trace, and route those results into an action: human review, an experiment, an alert, a regression case, or a release gate.
+The [Arize diagram](https://arize.com/blog/what-is-an-evaluation-harness/) is product-specific, but the architecture is general. An eval system needs a way to select evidence, execute the appropriate graders, persist results beside the source trace, and route those results into an action: human review, an experiment, an alert, a regression case, or a release gate.
 
 The smallest useful operating loop is therefore:
 
