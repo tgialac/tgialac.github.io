@@ -1,6 +1,14 @@
 ---
 title: "Evals from First Principles: How to Measure, Debug, and Improve AI Agents"
 date: 2026-08-10
+lastmod: 2026-08-11
+description: "A practical guide to evaluating AI agents through traces, targeted graders, repeated trials, release gates, and production feedback loops."
+summary: "How to turn agent failures into observable contracts, reliable evals, regression tests, and safer release decisions."
+tags: ["AI Agents", "LLM Evals", "Evaluation", "Observability"]
+cover:
+  image: "/images/illustrations/eval-task-dataset-scorer.png"
+  alt: "An evaluation decomposed into a task, dataset, and scorer."
+  hiddenInSingle: true
 draft: false
 ---
 
@@ -12,7 +20,7 @@ The agent had not merely missed an implied preference. Lemkin had repeatedly ins
 
 That description is not a **root-cause analysis**. A model explaining its previous behavior is still generating text, not exposing a reliable record of its internal causes. The confession sounds precise and self-aware, but it does not tell me which instruction lost priority, why the destructive action remained available, what context the agent saw at that step, or whether another run would make the same decision.
 
-Replit CEO Amjad Masad later confirmed that an agent in development had deleted production data and called the outcome unacceptable. Replit responded with product changes, including automatic separation between development and production databases, staging environments, and restore capabilities. The response matters because it moved beyond asking the model to be more careful. It changed the system around the model so that the same class of failure would become harder to repeat. [Masad described those measures publicly](https://x.com/amasad/status/1946986468586721478).
+Replit CEO Amjad Masad later confirmed that an agent in development had deleted production data and called the outcome unacceptable. Replit responded with product changes, including automatic separation between development and production databases, staging environments, and restore capabilities. The response matters because it moved beyond asking the model to be more careful. It changed the system around the model so that the same class of failure would become harder to repeat. Masad [described those measures publicly](https://x.com/amasad/status/1946986468586721478), and Replit later [documented the development/production database separation](https://replit.com/blog/introducing-a-safer-way-to-vibe-code-with-replit-databases) in its product.
 
 The database deletion is dramatic, but it is only one point in a much larger **failure surface**:
 
@@ -46,7 +54,7 @@ At the simplest level, an **application** is a system that receives an input and
 An AI application has a larger boundary. The model is one component inside it, not the application itself. Between input and output, the system may make several model calls, retrieve documents, select skills, invoke tools, read and update state, apply policies, retry failed steps, and decide when to stop. The orchestration code that connects those operations is part of the behavior too.
 
 <figure class="article-figure article-figure-plain">
-  <img src="/images/illustrations/agent-application-boundary.png" alt="An input flows into an agent and then to an output, while the agent interacts with model calls, retrieval, tools, skills, and state.">
+  <img src="/images/illustrations/agent-application-boundary.png" width="1176" height="426" alt="An input flows into an agent and then to an output, while the agent interacts with model calls, retrieval, tools, skills, and state.">
 </figure>
 
 This boundary matters. Suppose I replace the model but keep the prompt, tools, and retrieval pipeline fixed. That is one application change. Suppose I keep the model but change a tool schema, add a skill, update the search index, or shorten the context window. Those are application changes too. Any of them can alter the final answer, the path taken to reach it, or both.
@@ -90,7 +98,7 @@ That test turns a vague instruction into a behavior I can detect. Once the failu
 **Eval = Task + Dataset + Scorer**
 
 <figure class="article-figure article-figure-plain">
-  <img src="/images/illustrations/eval-task-dataset-scorer.png" alt="An eval branches into Task, Dataset, and Scorer, representing the system being run, the situations being tested, and the definition of success.">
+  <img src="/images/illustrations/eval-task-dataset-scorer.png" width="1214" height="713" alt="An eval branches into Task, Dataset, and Scorer, representing the system being run, the situations being tested, and the definition of success.">
 </figure>
 
 This is more than a convenient API shape. It is a compact specification for what an eval result actually means.
@@ -164,7 +172,7 @@ An agent run is closer to a sequence of decisions over changing state. An input 
 This sequence is not necessarily fixed. The router may select a different branch. A skill may or may not activate. The model may decide that no tool is needed, call several tools, retry one of them, or stop early. State created at one step becomes context for the next. What looks like a pipeline in a single trace is one realized path through a larger graph of possible actions.
 
 <figure class="article-figure article-figure-plain">
-  <img src="/images/illustrations/agent-router-downstream-workflows.png" alt="A query enters a router that can choose semantic search over documents, text-to-SQL over databases, or REST API calls to external services.">
+  <img src="/images/illustrations/agent-router-downstream-workflows.png" width="813" height="805" alt="A query enters a router that can choose semantic search over documents, text-to-SQL over databases, or REST API calls to external services.">
 </figure>
 
 The router in this architecture does more than forward a request. It decides which downstream world the agent will see. A semantic-search branch exposes documents. A text-to-SQL branch exposes structured database records. A function-calling branch exposes actions and live data from external systems. Once the route is selected, every later step operates on the evidence, capabilities, and constraints of that branch.
@@ -254,13 +262,9 @@ That final question is what turns evaluation from judgment into debugging. A sco
 
 Before I decide how to score an agent, I need to see what the application actually does. Not what the architecture diagram says it should do. Not what the final response claims it did. I need a record of the concrete path taken by a real run, including the decisions, external calls, state transitions, errors, latency, and cost that disappeared behind the final answer.
 
-Consider a research agent asked to compare three competitors and save the finished report to a shared workspace. The agent searches the right sources, retrieves relevant documents, resolves conflicting claims, and generates a strong report. It then calls the file-writing tool with the correct content and a plausible destination. The operating system rejects the write because the service account lacks permission for that directory. No report appears in the workspace.
+Consider a research agent that gathers the right evidence, produces a strong report, and then fails to save it because the service account lacks write permission. The user sees no artifact and a generic failure message. An output-only diagnosis may blame research or synthesis and lead me to change the prompt, model, or documents. The actual failure occurred in the **delivery layer**.
 
-From the user's perspective, the task failed. If the only recorded output is an empty artifact or a generic message such as "I could not complete the request," I might conclude that the model failed to research or write the report. I might change the prompt, replace the model, add more documents, or rewrite the synthesis scorer. None of those changes touches the actual defect.
-
-The research was correct. The synthesis was correct. The failure occurred in the **delivery layer**.
-
-This distinction is easy to miss because the final output compresses an entire execution into one symptom. **The response was wrong** is an observation about the boundary of the application. It is not a root cause.
+The final output compresses an execution into one symptom. **The response was wrong** describes the application boundary; it is not a root cause.
 
 ### Trace the Run, Span by Span
 
@@ -331,9 +335,7 @@ Observability will usually reveal more failures than a team can fix at once. Cou
 
 **Severity** is the consequence when the failure occurs. Depending on the product, it may combine user harm, financial loss, safety impact, privacy exposure, irreversibility, and the cost of recovery.
 
-If frequency is an estimated probability and severity is an estimated cost per occurrence, their product approximates **expected harm**. If I use ordinal scales such as 1 to 5, the result is only a ranking heuristic, not a precise economic quantity. Either way, the formula forces two separate questions: how likely is this failure, and how bad is it when it happens?
-
-Suppose a report agent produces an extra blank line in 15% of runs. The defect is common, visible, and low severity. A different agent writes to the wrong customer's workspace in 0.1% of runs. That defect is rare, but its privacy and trust consequences are severe. Fixing the formatting issue first because its count is larger would optimize the dashboard rather than the product's risk.
+If frequency is an estimated probability and severity is an estimated cost, their product approximates **expected harm**. With ordinal scales it is only a ranking heuristic. Either way, a formatting defect in 15% of runs may deserve less attention than a 0.1% chance of writing to the wrong customer's workspace. Counts alone optimize the dashboard rather than the product's risk.
 
 Frequency also needs a denominator. A tool failure seen ten times in one hundred tool calls is different from one seen ten times in one million calls. Severity needs context too. A malformed date in an internal draft is not equivalent to a malformed dosage in a clinical workflow. Useful prioritization is conditional on the population, task, and consequence being measured.
 
@@ -355,11 +357,9 @@ This loop turns production incidents into durable engineering knowledge. The tra
 
 It also changes how I sample traces. Random samples are useful for estimating common behavior, but rare high-severity failures can disappear inside averages. I want to retain traces triggered by errors, policy violations, unusually high cost, long latency, retries, unexpected tools, and user corrections. These are often the runs with the highest information value for future evals.
 
-Observability does not replace evaluation. A trace can show me exactly what happened without telling me whether that behavior was acceptable. Evaluation does not replace observability either. A failing score can tell me that a contract was violated without showing me why. I need the judgment of an eval and the causal evidence of a trace.
+Observability does not replace evaluation: a trace shows what happened without saying whether it was acceptable. Evaluation does not replace observability: a score flags a violated contract without explaining why. Together they let me replace **the response was wrong** with an actionable diagnosis such as bad routing, a wrong account ID, ignored evidence, or failed delivery.
 
-Only then can I move from **the response was wrong** to a claim I can act on: the router selected semantic search instead of billing, the tool received the wrong account ID, the model ignored retrieved evidence, or the report was correct but never reached the user.
-
-That is the real prerequisite for a useful eval system. Before I measure failures, I must make them visible. Before I prevent them, I must make them reproducible.
+Before I measure failures, I must make them visible. Before I prevent them, I must make them reproducible.
 
 ## 5. Read the Traces Before Writing the Grader
 
@@ -368,7 +368,7 @@ Once an application is instrumented, the temptation is to jump straight to metri
 But I may still be measuring the wrong things.
 
 <figure class="article-figure article-figure-plain">
-  <img src="/images/illustrations/llm-traces-and-evaluation-metrics.png" alt="An LLM trace composed of nested agent, retriever, embedding, model, and tool-call spans beside possible metrics for multi-turn, retrieval, and agent behavior.">
+  <img src="/images/illustrations/llm-traces-and-evaluation-metrics.png" width="1630" height="580" alt="An LLM trace composed of nested agent, retriever, embedding, model, and tool-call spans beside possible metrics for multi-turn, retrieval, and agent behavior.">
 </figure>
 
 The image captures both the opportunity and the trap. On the left, a run is decomposed into spans. On the right, there are many plausible metrics that could be attached to those spans. **Tool correctness** belongs near a tool decision. **Context precision** belongs near retrieval. **Task completion** belongs at the level of the full run. Different metrics observe different contracts.
@@ -543,7 +543,7 @@ These layers differ in cost, latency, scalability, and the kinds of evidence the
 The diagram below zooms in on the transition from model judgment to human review. A test case supplies the input, output, retrieval context, and other evidence to an LLM scorer. The scorer returns a score and, optionally, a reason. A threshold handles clear cases automatically. Borderline cases move to a human, whose decision can resolve the case and later improve the rubric or threshold.
 
 <figure class="article-figure article-figure-plain">
-  <img src="/images/illustrations/llm-evaluation-metric-human-escalation.png" alt="An LLM test case is scored by an LLM judge, checked against a pass threshold, and escalated to human evaluation for edge cases.">
+  <img src="/images/illustrations/llm-evaluation-metric-human-escalation.png" width="1473" height="716" alt="An LLM test case is scored by an LLM judge, checked against a pass threshold, and escalated to human evaluation for edge cases.">
 </figure>
 
 The image is not a complete execution order. Code checks may run before the model judge, after it, or beside it. A failed schema validation does not need to wait for a model score. A forbidden production write should fail the run even if both the LLM judge and a human reviewer like the final answer. The stack combines independent evidence; it is not a pipeline in which each later layer overrides the earlier one.
@@ -564,13 +564,7 @@ I use code whenever success can be expressed as an invariant over observable evi
 
 These checks are attractive because their behavior is legible. The same evidence produces the same result. When a code grader fails, I can inspect the assertion and know exactly which contract was violated. I can run it on every pull request and every trace at a cost close to zero.
 
-Even a crude regular expression can expose a real agent failure. Suppose an internal support agent must consult the tenant's current refund policy before stating an eligibility window. A trace-level check could simply search the trace JSON for the required `lookup_refund_policy` tool call.
-
-The agent answers, "You are eligible for a refund within 30 days," without calling the tool. The regex fails the run. It does not know whether 30 days is correct. It catches a different and more directly observable failure: the agent made a policy claim without consulting the source of truth it was required to use.
-
-Now give only the conversation to a general-purpose **correctness judge**. The answer is fluent, plausible, and consistent with common refund policies. The judge may pass it. But this tenant's current policy allows 14 days, and the judge was never given that private knowledge. It cannot verify a fact it does not possess. Worse, its broad prior knowledge may make the incorrect answer sound more credible.
-
-The simple check therefore catches the missing evidence contract while the semantically richer judge misses the factual error. This is not a paradox. The two graders have access to different evidence and answer different questions.
+Even a crude check can expose a real failure. If a support agent must call `lookup_refund_policy` before stating an eligibility window, a trace assertion can fail any unsupported policy claim. A general correctness judge given only the conversation may accept a plausible but obsolete 30-day answer because it cannot see the tenant's actual 14-day policy. The simple check catches the missing-evidence contract; the richer judge answers a different question from weaker evidence.
 
 Code-based evals become weak when I ask them to infer meaning indirectly. A regex can confirm that a citation-shaped string exists; it cannot establish that the cited source supports the claim. Exact match can verify a known account ID; it cannot decide whether an explanation is sufficiently clear for a confused customer. String similarity can reward lexical overlap while missing a contradiction. The boundary is simple: **use code for properties that are already explicit in data, state, or structure; do not force semantic judgment into a brittle proxy.**
 
@@ -589,9 +583,7 @@ This layer occupies the large space between exact assertions and manual review. 
 
 But **LLM-as-a-Judge is not the “advanced” replacement for code evals.** It is a different layer for a different kind of contract.
 
-A model judge introduces another nondeterministic system into the test harness. Its decision can change with the model version, prompt, response order, rubric wording, supplied reference, and sampling configuration. Research has documented [position bias in pairwise LLM judging](https://aclanthology.org/2025.ijcnlp-long.18/): swapping where two answers appear can change the preference even though their content is unchanged. Other observed failure modes include preferences related to verbosity, style, and model family.
-
-More fundamentally, a judge cannot reliably grade against knowledge it does not have. A study of expert tasks in dietetics and mental health found that subject-matter experts agreed with LLM judges on overall preference only [68% and 64% of the time](https://arxiv.org/abs/2410.20266), respectively. A broader study across twenty NLP evaluation tasks likewise found substantial variation across models, datasets, evaluated properties, and required expertise, concluding that model judges should be [validated against human judgments before use](https://aclanthology.org/2025.acl-short.20/).
+A model judge introduces another nondeterministic system into the harness. Its decision can change with the model version, prompt, response order, rubric, reference, and sampling configuration. Research has documented [position bias](https://aclanthology.org/2025.ijcnlp-long.18/) and substantial variation across models, datasets, properties, and required expertise, reinforcing that judges must be [validated against human judgments](https://aclanthology.org/2025.acl-short.20/) for the task where they will be used. More fundamentally, a judge cannot grade reliably against knowledge it cannot see.
 
 The remedy is not simply to choose a larger judge. I need to design its evidence contract as carefully as I designed the agent's:
 
@@ -605,9 +597,7 @@ The LLM's optional reason in the diagram is useful as an audit artifact, not as 
 
 ### Layer 3: Human Evaluation
 
-Human evaluation is the most expensive layer, so it should be spent where human judgment changes the answer.
-
-I need people when the requirement depends on expertise absent from the model, when stakeholders have not yet agreed on the boundary, when a case is novel enough that the rubric does not cover it, or when the consequence of a false pass is too high to delegate without review. Humans are especially important for:
+Human evaluation is the most expensive layer, so it should be spent where human judgment changes the answer: when the requirement needs expertise absent from the model, the boundary is disputed, the case is novel, or the consequence of a false pass is too high. Humans are especially important for:
 
 - defining what good behavior means before automation,
 - labeling a representative calibration set,
@@ -617,9 +607,7 @@ I need people when the requirement depends on expertise absent from the model, w
 - evaluating domain-specific correctness and subtle user harm,
 - auditing whether the automated stack has drifted away from product intent.
 
-Human evaluation is not an oracle. Reviewers can disagree, become fatigued, interpret vague rubrics differently, and bring their own biases. More reviewers do not repair an underspecified requirement. A useful human process still needs a clear rubric, access to the same source evidence, examples at the decision boundary, and an adjudication path for disagreement.
-
-The key difference is that a human reviewer can notice that the question itself is wrong. A code grader executes its assertion. An LLM judge applies its rubric. A domain expert can say that the rubric omits an exception, that the source is obsolete, that two stakeholder requirements conflict, or that a new failure class deserves its own evaluator. This makes humans not only the final layer of the stack, but also the mechanism that improves the layers below it.
+Human evaluation is not an oracle. Reviewers disagree, tire, and interpret vague rubrics differently. They still need the source evidence, examples at the boundary, and an adjudication path. Their unique value is the ability to notice that the question itself is wrong: a source is obsolete, the rubric omits an exception, requirements conflict, or a new failure class exists. Human review therefore improves the layers below it rather than merely overriding them.
 
 ### Escalate Uncertainty, Not Every Case
 
@@ -629,17 +617,13 @@ The threshold in the diagram is useful only if it creates three regions rather t
 - **Clear fail:** one or more important contracts are violated.
 - **Review region:** the score is near the boundary, graders disagree, evidence is incomplete, or the expected harm requires human confirmation.
 
-This lets human effort follow information value. Reviewing the thousandth obvious schema failure teaches me little. Reviewing a novel case where the code checks pass, the groundedness judge passes, the correctness judge fails, and the user reports harm may reveal a missing requirement or an entire new failure class.
-
-The human decision should then flow back down the stack. If reviewers repeatedly apply the same crisp rule, I can encode it as a code check. If they repeatedly make the same semantic distinction, I can add labeled examples and refine the LLM rubric. If they continue to disagree, the requirement may not yet be automatable—and the disagreement is valuable evidence rather than noise to hide.
+This makes human effort follow information value. Reviewing the thousandth obvious schema failure teaches me little; reviewing a novel disagreement among code checks, model graders, and user feedback may expose a missing requirement. Repeated crisp decisions should become code checks, repeated semantic distinctions should refine the rubric, and persistent disagreement should remain visible as evidence that the requirement is not yet automatable.
 
 A practical routing rule is:
 
 **Use code when the contract is explicit. Use an LLM when the contract is semantic. Use a human when the contract or the truth is still uncertain.**
 
-Most mature eval suites are therefore hybrids. They use deterministic checks broadly, model judges selectively, and human review strategically. Multiple layers can score the same run because they protect different boundaries. A refund response may pass the tone rubric, fail the exact amount assertion, and be escalated because the underlying policy is ambiguous. Reducing those results to one average would erase the reason the stack exists.
-
-The cheapest judge that works is not merely a cost optimization. It is usually the judge with the shortest path from evidence to decision. When code can inspect the truth directly, adding a model makes the test less certain. When meaning cannot be expressed as an invariant, refusing model judgment creates brittle proxies. When neither code nor the model has the necessary knowledge, only a qualified human can establish the label.
+Mature suites are therefore hybrids. A refund response may pass tone, fail the exact amount assertion, and be escalated because the policy is ambiguous. The cheapest judge that works is usually the one with the shortest path from evidence to decision: code for explicit truth, a model for semantic contracts, and a qualified human when neither has enough knowledge.
 
 The question is not **Which judge is best?** It is **Which judge can decide this contract from the evidence available, at the reliability and cost the consequence requires?**
 
@@ -692,7 +676,7 @@ This is not merely a conceptual edge case. Published RAG evaluations produce mat
 
 In an evaluation of ClimateGPT, researchers measured claim support in two ways. They checked generated claims against the supplied RAG reference as a measure of faithfulness, then against a broader climate knowledge base as a measure of factuality. With retrieval enabled, the original ClimateGPT achieved only **30%** claim support against the supplied reference but **61%** against the knowledge base. The Faithful+ variant raised those scores to **57%** and **69%**, respectively. The same outputs therefore received very different judgments because the evaluators asked different questions of different evidence sets. [The paper reports both measurements side by side](https://aclanthology.org/anthology-files/pdf/climatenlp/2025.climatenlp-1.17.pdf).
 
-The reverse failure—following context more closely while becoming less accurate—also appears empirically. The FaithfulRAG study evaluated methods under fact-level conflicts on MuSiQue and SQuAD. It identified an **incorrect-match error** in which a model updates its prior knowledge but learns the wrong thing from misleading context. On SQuAD, a prompting method designed to increase context faithfulness reduced errors caused by ignoring context, but increased incorrect-match errors from **7.1% to 14.1%**. A decoding-based method pushed them further to **16.4%**. On MuSiQue, the same error rose from **5.2%** to **6.4%** with prompting and **14.3%** with decoding. [The authors describe this as contextual overfitting](https://aclanthology.org/2025.acl-long.1062/): the model becomes better at obeying retrieved evidence without becoming better at deciding whether that evidence should be trusted.
+The reverse failure—following context more closely while becoming less accurate—also appears empirically. Under fact-level conflicts, FaithfulRAG methods reduced errors from ignoring context but increased **incorrect-match errors**, in which the model learned the wrong thing from misleading evidence. [The authors describe this as contextual overfitting](https://aclanthology.org/2025.acl-long.1062/): better obedience to retrieved evidence is not the same as better judgment about whether that evidence should be trusted.
 
 These results expose a third contract that a single answer score would hide: **context adequacy**. Before asking whether the model used the context faithfully, I should ask whether the context was sufficient, current, and authoritative enough to answer the question at all.
 
@@ -708,13 +692,9 @@ The agent can pass the generation contract while the application fails end to en
 
 ### Current Correctness Requires Current Ground Truth
 
-FreshQA was created because ordinary static QA benchmarks cannot evaluate knowledge that changes. One example in the published evaluator asks how the U.S. National Hurricane Center revised Hurricane Katrina's reported death toll in January 2023. The benchmark's updated answer is **1,392**, a decrease from the earlier figure of 1,800. The evaluated response says it cannot provide the revision because its knowledge ends in September 2021. The response is marked incorrect using the updated answer supplied to the evaluator, not whatever the judge happens to remember. [FreshLLMs publishes this case together with the evaluator prompt](https://aclanthology.org/2024.findings-acl.813/).
+FreshQA was created because static QA benchmarks cannot evaluate knowledge that changes. It pairs the candidate response with an explicit current answer and date, so the judge is not asked to manufacture ground truth from memory. The benchmark itself must be refreshed because correctness can change while the question remains identical. [FreshLLMs publishes its cases together with the evaluator prompt](https://aclanthology.org/2024.findings-acl.813/).
 
-The design choice matters as much as the example. FreshQA pairs the question and candidate response with explicit current answers and a current date. The judge is not asked to manufacture ground truth from parametric memory. For fast-changing questions, the benchmark itself must be refreshed because correctness can change while the wording of the question remains identical.
-
-Recent evidence on model judges makes the effect of missing references even clearer. In experiments across three languages, judges without a reference answer tended to over-credit incorrect responses. Adding reference information changed their correct-versus-incorrect decisions by as much as **85%** in some settings, and those changes generally moved judgments closer to human annotations. [The study recommends reference-aware calibration before using reference-free correctness judges](https://arxiv.org/abs/2607.12885).
-
-Even providing a reference does not make the judge infallible. A separate controlled study found that judges can ignore an explicit reference when it conflicts with their parametric beliefs, producing the wrong verdict even when the candidate clearly matches the supplied answer. The failure was stronger for familiar knowledge and remained under chain-of-thought prompts, detailed instructions, and in-context examples. [The authors trace the behavior to over-reliance on parametric knowledge](https://arxiv.org/abs/2601.07506).
+References help but do not make a judge infallible. Without them, judges tend to over-credit incorrect responses; with them, a judge may still favor its parametric belief over the supplied answer. Studies therefore recommend [reference-aware calibration](https://arxiv.org/abs/2607.12885) while documenting the remaining risk of [over-reliance on parametric knowledge](https://arxiv.org/abs/2601.07506).
 
 Together, these results support a narrower and more defensible claim than the invented scorecard: a correctness judgment is only as meaningful as the ground truth supplied to the evaluator and the evaluator's demonstrated ability to use it. If a task depends on live internal state, the test needs a timestamped snapshot, access to the authoritative tool, or a reference captured at execution time. Without one of those, the honest result may be **not evaluable from available evidence**, not **fail**.
 
@@ -754,6 +734,167 @@ Only after those questions are answered does evaluator tuning make sense. Otherw
 Faithfulness is valuable because it makes the agent accountable to the evidence it received. Correctness is valuable because users ultimately care whether the answer is true. Neither metric subsumes the other, and neither can be interpreted without its evidence boundary.
 
 **A faithful answer can still be wrong. A correct answer can still be unsupported. And a judge without the relevant truth can score only its own ignorance.**
+
+## 8. From a Trace to a Release Gate: A Minimal Eval Harness
+
+The previous sections establish the pieces: tasks, datasets, traces, requirements, and graders. To make them operational, I need one more component: a harness that can recreate a situation, run the application, collect the evidence, grade the result, and compare it with a baseline.
+
+An **evaluation harness** is the infrastructure around the eval. It provisions the test environment, executes trials, records versions and traces, invokes graders, aggregates results, and decides where those results go next. The harness does not define what good means. The task and its graders do that. Its job is to make the judgment repeatable.
+
+### Start With One Executable Case
+
+Consider the duplicate-charge failure from Section 5. A minimized case might look like this:
+
+```yaml
+id: refund_duplicate_charge
+input:
+  user_message: "I was charged twice for order 8472. Refund the duplicate."
+initial_state:
+  order_id: 8472
+  settled_charges:
+    - { id: ch_1, amount: 49.00 }
+    - { id: ch_2, amount: 49.00 }
+  refunds: []
+  policy_version: refunds-2026-08-01
+requirements:
+  expected_outcome: exactly_one_duplicate_charge_refunded
+  required_evidence:
+    - current_order_state
+    - current_refund_policy
+  prohibited_actions:
+    - refund_more_than_49.00
+    - refund_more_than_once
+graders:
+  - correct_final_state
+  - policy_checked_before_refund
+  - no_forbidden_action
+  - confirmation_matches_provider_state
+metadata:
+  slice: duplicate-charge
+  severity: critical
+  source: production-incident
+```
+
+This row contains more than a prompt and a reference answer. It contains the state from which the agent must begin, the outcome that must become true, evidence the agent is required to consult, actions it must never take, and metadata that lets me report results for the relevant product slice.
+
+I should also be able to execute a **reference solution** against the same fixture and pass every grader. If a known-good implementation cannot pass, the task, environment, or grader is broken. A frontier agent scoring zero across many attempts is not automatically evidence of low capability; it may be evidence of an impossible or ambiguous test.
+
+The dataset also needs the negative counterpart. If I test only that the agent refunds duplicate charges, I may optimize it into refunding any repeated-looking payment. A balanced suite includes cases where two charges are legitimate, the evidence is ambiguous, the policy forbids an automatic refund, and the correct action is to ask, abstain, or escalate. Anthropic recommends both reference solutions and balanced problem sets for this reason: the eval must test when a behavior should occur and when it should not. [Its field guide describes these checks in the path from an initial task set to a stable harness](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents).
+
+### A Task Is Not a Trial
+
+The dataset row is a **task**. Each execution of that task is a **trial**. Because the agent is nondeterministic, one trial is one sample from its behavior, not a final verdict on its reliability.
+
+Every trial should begin from an isolated environment:
+
+- restore the same database fixture and policy version,
+- remove files, caches, messages, and credentials left by previous trials,
+- pin the application, prompt, model, tool schema, and grader versions,
+- set explicit time, token, cost, retry, and action limits,
+- assign a fresh trace ID and idempotency namespace.
+
+Without isolation, trials can contaminate one another. An earlier run may leave a refunded charge, a cached answer, a generated file, or a warm retrieval result that makes the next run artificially easy. Shared resource exhaustion can create the opposite effect and make several trials fail for the same infrastructure reason. Those observations are correlated; counting them as independent agent failures produces a misleading score.
+
+The harness should therefore return at least three top-level statuses:
+
+| Status | Meaning | Release treatment |
+| --- | --- | --- |
+| **Pass** | The trial ran correctly and satisfied the required contracts | Include in product metrics |
+| **Agent failure** | The trial ran correctly and the application violated a contract | Include as a failed product result |
+| **Harness error** | The fixture, dependency, grader, timeout, or runner made the result invalid | Exclude from product score and investigate separately |
+
+Silently converting harness errors into agent failures punishes the application for a broken test. Silently retrying them until they pass hides unreliable infrastructure. The harness itself needs error rates, logs, ownership, and regression tests.
+
+### Grade the Outcome, the Trajectory, and the Operation
+
+After a trial, I want three evidence bundles:
+
+1. **Outcome:** Does the provider state contain exactly one refund for `49.00` on the duplicated charge?
+2. **Trajectory:** Did the agent consult the effective policy, select the correct charge, obtain any required approval, and avoid prohibited actions?
+3. **Operation:** How many turns, tool calls, retries, tokens, dollars, and seconds did the trial consume?
+
+The outcome should dominate when multiple valid paths exist. I should not require one exact tool sequence merely because it is the sequence I imagined. Strict trajectory assertions belong where order is itself a product or safety contract: identity must be verified before disclosure, approval must precede a high-value refund, and a production write must never occur during a freeze. For everything else, a flexible path plus a correct final state is often better than a brittle golden trajectory.
+
+The cheapest competent grader still applies. State and numeric invariants use code. Semantic explanation quality may use a calibrated model grader. Missing or conflicting evidence should produce `unknown` or `needs_review` rather than force an invented pass/fail judgment. Human reviewers adjudicate the boundary cases and periodically verify that the automated graders still represent product judgment.
+
+### Measure Reliability, Not a Memorable Run
+
+Suppose the refund task passes 15 of 20 isolated trials. The empirical success rate is 75%, but the product meaning depends on how the agent will be used.
+
+**pass@k** asks whether at least one of `k` attempts succeeds. Under an independence assumption, a system with per-trial success probability `p` has probability `1 - (1 - p)^k` of at least one success. This is useful when retries are allowed and one successful solution is enough.
+
+**pass^k** asks whether all `k` attempts succeed. Its corresponding probability is `p^k`. At `p = 0.75`, the probability of three consecutive successes is only about 42%. This is often the more relevant view for customer-facing or safety-sensitive agents, where users need the behavior to be consistently correct rather than occasionally recoverable. Anthropic uses these two measures to distinguish capability from consistency in nondeterministic agent evals. [The distinction becomes substantial as the number of trials grows](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents).
+
+No result should be reported as a naked percentage. I want the numerator, denominator, number of trials per task, harness-error count, and results by meaningful slice. A 95% aggregate can hide a 40% pass rate for multilingual requests or a single catastrophic authorization failure. When comparing a candidate with production, I run both on the same cases and fixtures, report uncertainty around the difference, and inspect the trials where their verdicts disagree. Small score movements on small datasets are evidence to investigate, not automatic proof of improvement.
+
+### Separate Capability From Regression
+
+A **capability suite** asks what the agent can do now. It should contain difficult but valid tasks and may begin with a low pass rate. It provides room to improve.
+
+A **regression suite** asks whether behavior the product already depends on still works. Known incidents, contractual behaviors, and critical safety cases belong here. Its expected pass rate should be close to 100%, with hard gates for requirements that cannot be traded against helpfulness or tone.
+
+An overall release rule can then remain deterministic even when some component graders are probabilistic:
+
+```text
+BLOCK the candidate if:
+- any critical safety, authorization, or state-integrity case fails;
+- the regression suite drops beyond the agreed tolerance;
+- a protected traffic slice regresses materially;
+- latency, cost, retry, or action budgets are exceeded;
+- grader disagreement falls inside the human-review region.
+
+ALLOW a controlled release if:
+- all hard gates pass;
+- capability gains survive repeated trials;
+- no important slice or operational metric regresses;
+- harness errors remain below their own reliability threshold.
+```
+
+OpenAI's evaluation guidance calls for this kind of continuous process: evaluate early, run scoped tests on changes, log behavior, calibrate automation with human feedback, and grow the eval set as new nondeterministic cases appear. [Continuous evaluation turns the suite into a release practice rather than a periodic report](https://developers.openai.com/api/docs/guides/evaluation-best-practices).
+
+### Evals Measure Controls; Guardrails Enforce Them
+
+The Replit incident exposes a boundary that an eval article should not blur. An eval can detect a production write, estimate how often the agent attempts it, preserve the incident as a regression case, and verify that a new architecture behaves better. The eval does not itself revoke database credentials or stop a destructive query already in flight.
+
+<figure class="article-figure">
+  <img src="/images/illustrations/guardrails-evals-action-layer.webp" width="1768" height="686" alt="An agent pipeline with pre-model and post-model guardrails, traces feeding evals, an action layer, and a feedback loop for dynamic adaptation.">
+  <figcaption>Guardrails operate in the execution path; traces and evals measure behavior and feed improvements back into the system.</figcaption>
+</figure>
+
+**Guardrails** are runtime controls. They include policy checks, input sanitization, output validation, redaction, least-privilege permissions, sandboxing, approval requirements, transaction boundaries, and limits on high-risk tools. Their job is to prevent, constrain, or interrupt an action before unacceptable harm occurs.
+
+**Evaluators** judge behavior. Many run offline or asynchronously because model-based judgment is too slow, expensive, or uncertain for the critical path. A small evaluator can become an inline guardrail only when its latency and false-positive/false-negative trade-offs are acceptable for production. [Hamel Husain and Shreya Shankar make this distinction explicit](https://hamel.dev/blog/posts/evals-faq/whats-the-difference-between-guardrails-evaluators.html): use guardrails for immediate intervention and evaluators for monitoring and improvement.
+
+The practical rule is:
+
+> Evals tell me whether a control works. They are not a substitute for the control.
+
+For a production database, the reliable fix is not a stronger sentence in the system prompt. It is an application architecture in which the agent cannot mutate production without a narrow capability, an explicit approval, and a recoverable transaction. The eval proves that those controls remain effective across the cases that matter.
+
+### Connect Offline Tests to Production
+
+The harness has two sources of work. **Offline evals** run curated tasks with fixtures and known evidence before deployment. **Online evals** inspect sampled production traces for safety, coherence, drift, user friction, cost, and unfamiliar behavior when authoritative ground truth may not be available.
+
+The scopes also differ. A **span** can test one tool decision. A **trace** can test a complete agent turn and its state changes. A **session** or **thread** can test whether the user's need was resolved across multiple turns, handoffs, corrections, and memory updates. Single-turn passes do not guarantee a successful conversation. For multi-turn systems, production prefixes can be replayed while allowing the candidate to generate the remaining turn or branch, which preserves realistic context without requiring one brittle scripted dialogue. [LangChain describes this run, trace, and thread separation together with the offline/online loop](https://www.langchain.com/resources/agent-evals).
+
+<figure class="article-figure">
+  <img src="/images/illustrations/arize-ax-evaluation-harness.webp" width="1672" height="941" alt="The Arize AX evaluation harness organized into evaluation inputs, evaluation execution, and evaluation actions.">
+  <figcaption>A concrete vendor implementation of the pattern: inputs are scoped and prepared, evaluators execute, and results drive review, experiments, alerts, and CI/CD actions. Source: <a href="https://arize.com/blog/what-is-an-evaluation-harness/">Arize AI</a>.</figcaption>
+</figure>
+
+The Arize diagram is product-specific, but the architecture is general. An eval system needs a way to select evidence, execute the appropriate graders, persist results beside the source trace, and route those results into an action: human review, an experiment, an alert, a regression case, or a release gate.
+
+The smallest useful operating loop is therefore:
+
+1. Capture representative and high-information traces.
+2. Review failures with the person authorized to define good behavior.
+3. Minimize each important failure into an isolated, executable task.
+4. Run repeated trials against the production baseline and candidate.
+5. Grade outcomes, required trajectory contracts, and operational budgets.
+6. Apply transparent release gates and deploy runtime controls for high-impact failures.
+7. Monitor sampled production behavior and promote new failures back into the suite.
+
+This is the point at which an eval stops being a score in a notebook. It becomes part of the engineering system that decides what can ship, explains why it failed, and remembers what the product has already learned.
 
 ## 9. Never Build a “God” Evaluator
 
@@ -807,7 +948,7 @@ An LLM judge can misunderstand the rubric, miss a subtle failure, invent a reaso
 The evaluator must therefore become an evaluated system too.
 
 <figure class="article-figure article-figure-plain">
-  <img src="/images/illustrations/llm-judge-human-meta-evaluation.png" alt="The same output is evaluated by an LLM judge and a human, their verdicts are compared, and the results are organized into true positive, false positive, false negative, and true negative outcomes.">
+  <img src="/images/illustrations/llm-judge-human-meta-evaluation.png" width="703" height="763" alt="The same output is evaluated by an LLM judge and a human, their verdicts are compared, and the results are organized into true positive, false positive, false negative, and true negative outcomes.">
 </figure>
 
 The mental model is simple. Give the same examples to the LLM judge and to qualified human reviewers. Treat the adjudicated human labels as the operational ground truth for the rubric. Then compare the two sets of verdicts.
@@ -882,7 +1023,7 @@ A production failure is expensive data. A real user found a path through the sys
 If I fix the prompt and close the incident, I have repaired one moment. If I preserve the case as a reproducible test, I have added the failure to the system's memory.
 
 <figure class="article-figure article-figure-plain">
-  <img src="/images/illustrations/production-failure-golden-dataset-regression-test.png" alt="A production failure moves through human review and labeling into a golden dataset, where it becomes a regression test.">
+  <img src="/images/illustrations/production-failure-golden-dataset-regression-test.png" width="1449" height="219" alt="A production failure moves through human review and labeling into a golden dataset, where it becomes a regression test.">
 </figure>
 
 This is the engineering role of a **golden dataset**: a curated, versioned collection of cases whose expected behavior has been reviewed closely enough to support repeatable decisions. It is not “golden” because every answer is timeless or because one exact string is the only acceptable output. It is golden because the examples carry explicit product judgment and provenance.
@@ -952,3 +1093,15 @@ This is a flywheel because each cycle increases the organization's ability to sp
 The dataset does not merely measure the agent. It accumulates the domain decisions, operational scars, and product taste that define what the agent is for.
 
 **A failure that is fixed but not preserved as a test is only temporarily understood.**
+
+## 12. Conclusion
+
+An agent does not “work” merely because it produced a convincing answer, completed a few demonstrations, or achieved a high aggregate score. It works only to the extent that its important behaviors have been specified, observed, and tested across the situations in which failure matters.
+
+A defensible eval system begins with the application rather than the model, and with concrete failures rather than convenient metrics. It records the trajectory, identifies the first broken contract, preserves the case in a reproducible dataset, and attaches the cheapest evaluator capable of judging that contract reliably. It repeats trials to measure consistency, separates agent failures from harness failures, and compares candidate changes with a stable baseline. When the evaluator itself is probabilistic, its errors are measured against human judgment rather than accepted on authority.
+
+No single score can certify an agent. The evidence is a collection of bounded claims: which system was tested, on which situations, according to which requirements, using which sources of truth, across how many trials, and with what known evaluator error. Release gates turn those claims into engineering decisions. Guardrails, permissions, approvals, and recoverable state transitions enforce the boundaries that cannot be left to model behavior.
+
+The objective is not to eliminate nondeterminism. It is to make its consequences visible and manageable.
+
+**An agent earns trust when its failures can be found, explained, reproduced, contained, and prevented from quietly returning.**

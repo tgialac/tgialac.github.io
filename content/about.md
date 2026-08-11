@@ -9,8 +9,8 @@ comments: false
 
 Hi, I'm **Tran Gia Lac** 👋
 
-This is my little corner of the Internet — where I write down what I learn, the projects I'm working on, and the interesting things I pick up along the way.
+I use this site as a working notebook for the systems I build and the engineering ideas I want to understand from first principles. I currently write about AI agents, evaluation, observability, and the software practices that make nondeterministic systems easier to debug and trust.
 
-<!-- TODO: Introduce yourself a bit more — what you do, topics you care about, your main skills... A few honest lines are enough. -->
+The articles are meant to be useful engineering references rather than finished declarations. I try to connect claims to primary sources, make assumptions visible, and revise the material when better evidence appears.
 
-You can find me on [GitHub](https://github.com/tgialac) or email me at [work.trangialac@gmail.com](mailto:work.trangialac@gmail.com).
+You can find my work on [GitHub](https://github.com/tgialac), suggest a correction through the edit link on each article, or email me at [work.trangialac@gmail.com](mailto:work.trangialac@gmail.com).
