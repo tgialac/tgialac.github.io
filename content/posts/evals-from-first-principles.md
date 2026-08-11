@@ -686,28 +686,15 @@ If the answer is faithful but incorrect, changing the generation prompt may do n
 
 Correctness and faithfulness are therefore not competing scores. They protect different boundaries.
 
-### A Faithful Answer From a Stale World
+### The Divergence Appears in Real Evaluations
 
-Suppose a research agent is asked at 09:00 UTC:
+This is not merely a conceptual edge case. Published RAG evaluations produce materially different results depending on whether claims are checked against the context given to the model or against a broader source of truth.
 
-> How many customer-facing incidents are currently open in the EU region?
+In an evaluation of ClimateGPT, researchers measured claim support in two ways. They checked generated claims against the supplied RAG reference as a measure of faithfulness, then against a broader climate knowledge base as a measure of factuality. With retrieval enabled, the original ClimateGPT achieved only **30 percent** claim support against the supplied reference but **61 percent** against the knowledge base. The Faithful+ variant raised those scores to **57 percent** and **69 percent**, respectively. The same outputs therefore received very different judgments because the evaluators asked different questions of different evidence sets. [The paper reports both measurements side by side](https://aclanthology.org/anthology-files/pdf/climatenlp/2025.climatenlp-1.17.pdf).
 
-The retrieval layer provides an operations snapshot generated at 08:30 UTC:
+The reverse failure—following context more closely while becoming less accurate—also appears empirically. The FaithfulRAG study evaluated methods under fact-level conflicts on MuSiQue and SQuAD. It identified an **incorrect-match error** in which a model updates its prior knowledge but learns the wrong thing from misleading context. On SQuAD, a prompting method designed to increase context faithfulness reduced errors caused by ignoring context, but increased incorrect-match errors from **7.1 percent to 14.1 percent**. A decoding-based method pushed them further to **16.4 percent**. On MuSiQue, the same error rose from **5.2 percent** to **6.4 percent** with prompting and **14.3 percent** with decoding. [The authors describe this as contextual overfitting](https://aclanthology.org/2025.acl-long.1062/): the model becomes better at obeying retrieved evidence without becoming better at deciding whether that evidence should be trusted.
 
-> Four customer-facing incidents are open in the EU region.
-
-The agent answers:
-
-> There are four open customer-facing incidents in the EU region.
-
-Every word that matters is supported by the supplied context.
-
-- **Faithfulness: ✅** The output follows directly from the retrieved snapshot.
-- **Correctness: unknown from this context alone.** The word *currently* requires state at 09:00 UTC, not at 08:30 UTC.
-
-If two incidents were resolved at 08:45 UTC, the answer is faithful and wrong. The model did not hallucinate. The retrieval system supplied stale evidence for a time-sensitive question, and the agent failed to recognize that the evidence could not support the requested time boundary.
-
-This example exposes a third contract that a single answer score would hide: **context adequacy**. Before asking whether the model used the context faithfully, I should ask whether the context was sufficient, current, and authoritative enough to answer the question at all.
+These results expose a third contract that a single answer score would hide: **context adequacy**. Before asking whether the model used the context faithfully, I should ask whether the context was sufficient, current, and authoritative enough to answer the question at all.
 
 For a RAG or agent system, I can separate the responsibilities:
 
@@ -719,25 +706,17 @@ For a RAG or agent system, I can separate the responsibilities:
 
 The agent can pass the generation contract while the application fails end to end. That is exactly why the first broken contract matters more than the final symptom.
 
-### The 0/15 Correctness Score
+### Current Correctness Requires Current Ground Truth
 
-Now consider an eval slice of fifteen tasks that explicitly require current data from internal systems. In each case, the agent calls the appropriate live tool and answers from the returned state. One user asks which service regions are degraded. The agent calls the status tool, receives `us-east-1` and `ap-southeast-2`, and reports those two regions without adding anything else.
+FreshQA was created because ordinary static QA benchmarks cannot evaluate knowledge that changes. One example in the published evaluator asks how the U.S. National Hurricane Center revised Hurricane Katrina's reported death toll in January 2023. The benchmark's updated answer is **1,392**, a decrease from the earlier figure of 1,800. The evaluated response says it cannot provide the revision because its knowledge ends in September 2021. The response is marked incorrect using the updated answer supplied to the evaluator, not whatever the judge happens to remember. [FreshLLMs publishes this case together with the evaluator prompt](https://aclanthology.org/2024.findings-acl.813/).
 
-The faithfulness judge receives each answer together with its tool result. It can verify that every output in the slice follows the evidence available to the agent:
+The design choice matters as much as the example. FreshQA pairs the question and candidate response with explicit current answers and a current date. The judge is not asked to manufacture ground truth from parametric memory. For fast-changing questions, the benchmark itself must be refreshed because correctness can change while the wording of the question remains identical.
 
-- **Faithfulness judge: 15/15**
+Recent evidence on model judges makes the effect of missing references even clearer. In experiments across three languages, judges without a reference answer tended to over-credit incorrect responses. Adding reference information changed their correct-versus-incorrect decisions by as much as **85 percent** in some settings, and those changes generally moved judgments closer to human annotations. [The study recommends reference-aware calibration before using reference-free correctness judges](https://arxiv.org/abs/2607.12885).
 
-The correctness judge receives only each user question and final answer. It has no access to the internal systems, and its reference data predates the events. It cannot verify any of the fifteen answers and returns:
+Even providing a reference does not make the judge infallible. A separate controlled study found that judges can ignore an explicit reference when it conflicts with their parametric beliefs, producing the wrong verdict even when the candidate clearly matches the supplied answer. The failure was stronger for familiar knowledge and remained under chain-of-thought prompts, detailed instructions, and in-context examples. [The authors trace the behavior to over-reliance on parametric knowledge](https://arxiv.org/abs/2601.07506).
 
-- **Correctness judge: 0/15**
-
-The scores look like a contradiction. They are actually a description of two different information boundaries.
-
-The faithfulness judge had the evidence required for its question: *Did the answer follow the tool result?* The correctness judge did not have the evidence required for its question: *Were these the regions degraded at that moment?* Its zero is not strong evidence that the agent was wrong. It is evidence that the evaluator could not verify the answer from what it was given.
-
-This is a dangerous failure mode because the number still looks objective. A team may respond by tuning the agent to satisfy the correctness grader: removing current facts the grader does not recognize, preferring older claims from its parametric knowledge, or hedging correct answers until they resemble the reference set. The metric improves while the product becomes less useful.
-
-The proper outcome for the correctness judge in this setup is not necessarily **fail**. It may be **not evaluable from available evidence**. If the task depends on live internal state, the evaluator needs a timestamped snapshot of that state, access to the same authoritative tool, or a reference captured at execution time. Without one of those, the test does not contain a ground truth.
+Together, these results support a narrower and more defensible claim than the invented scorecard: a correctness judgment is only as meaningful as the ground truth supplied to the evaluator and the evaluator's demonstrated ability to use it. If a task depends on live internal state, the test needs a timestamped snapshot, access to the authoritative tool, or a reference captured at execution time. Without one of those, the honest result may be **not evaluable from available evidence**, not **fail**.
 
 ### The Evaluator Has an Information Boundary Too
 
