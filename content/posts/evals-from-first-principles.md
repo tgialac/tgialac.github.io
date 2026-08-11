@@ -754,3 +754,42 @@ Only after those questions are answered does evaluator tuning make sense. Otherw
 Faithfulness is valuable because it makes the agent accountable to the evidence it received. Correctness is valuable because users ultimately care whether the answer is true. Neither metric subsumes the other, and neither can be interpreted without its evidence boundary.
 
 **A faithful answer can still be wrong. A correct answer can still be unsupported. And a judge without the relevant truth can score only its own ignorance.**
+
+## 9. Never Build a “God” Evaluator
+
+A tempting evaluator prompt asks one model to inspect everything at once:
+
+> Judge this response for accuracy, faithfulness, completeness, tone, safety, formatting, and actionability. Return pass or fail.
+
+The result is compact, inexpensive, and nearly useless when it fails.
+
+If the judge returns **fail**, I do not know whether the answer was factually wrong, unsupported by context, unsafe, badly formatted, rude, or simply not useful. If it returns **pass**, I do not know whether every dimension passed or whether excellent tone and formatting compensated for a serious factual error. The single label destroys the information I need for debugging.
+
+This is the **god evaluator** anti-pattern: one evaluator attempts to represent every desirable property of the application and compresses them into one verdict.
+
+The problem is deeper than explainability. Each dimension has a different evidence contract and often needs a different type of grader. Accuracy may require a verified reference or live system state. Faithfulness requires the context supplied to the agent. Safety may require the entire trajectory. Format may need only a deterministic schema validator. Tone and actionability require semantic judgment from the final response. One prompt cannot make missing evidence appear merely by listing more criteria.
+
+Calibration also becomes incoherent. A safety evaluator should be tuned to minimize dangerous false passes. A tone evaluator can tolerate more disagreement. A format evaluator should be deterministic. A correctness evaluator for expert knowledge must be validated against domain experts. Combining all of them gives me one threshold with no clear meaning and one error rate that hides several different error distributions.
+
+The better design is one evaluator per failure dimension:
+
+| Evaluator | Question it answers | Evidence it needs |
+| --- | --- | --- |
+| **accuracy_eval** | Is the answer correct? | output and authoritative ground truth |
+| **faithfulness_eval** | Is every material claim supported? | output and supplied context |
+| **actionability_eval** | Can the user act on the response or complete the task? | user goal and final response |
+| **safety_eval** | Did the run violate a policy or cross a prohibited boundary? | policy, output, actions, and trace |
+| **format_eval** | Does the output satisfy the required interface? | output and schema |
+| **tool_use_eval** | Did the agent select and use tools correctly? | expected constraints and tool-call trace |
+
+Now a run can produce a diagnostic result:
+
+**Accuracy: pass. Faithfulness: pass. Actionability: fail. Safety: pass. Format: pass.**
+
+That result tells me where to investigate. It also lets me build a targeted dataset for actionability, change the relevant rubric, and measure whether the fix improves that dimension without moving the others.
+
+An overall release decision can still exist, but it should be a transparent policy over the component results rather than another model opinion. Safety, authorization, or correctness may be hard gates. Tone may be monitored as a graded signal. Format may be enforced before an output reaches the user. The aggregation rule belongs to the product requirement; it should not be improvised inside the judge's hidden reasoning.
+
+Separate evaluators also make the stack from Section 6 practical. `format_eval` may be code. `faithfulness_eval` may be an LLM supplied with retrieval context. `accuracy_eval` may combine a reference check with expert review. The dimensions can share infrastructure without sharing a verdict.
+
+**One evaluator should answer one evaluation question.** That is what makes calibration possible, failures localizable, and improvements attributable to the part of the system that actually changed.
