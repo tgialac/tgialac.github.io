@@ -544,7 +544,6 @@ The diagram below zooms in on the transition from model judgment to human review
 
 <figure class="article-figure article-figure-plain">
   <img src="/images/illustrations/llm-evaluation-metric-human-escalation.png" alt="An LLM test case is scored by an LLM judge, checked against a pass threshold, and escalated to human evaluation for edge cases.">
-  <figcaption>An LLM judge can automate the middle of the stack, while uncertain or consequential cases are escalated to human review.</figcaption>
 </figure>
 
 The image is not a complete execution order. Code checks may run before the model judge, after it, or beside it. A failed schema validation does not need to wait for a model score. A forbidden production write should fail the run even if both the LLM judge and a human reviewer like the final answer. The stack combines independent evidence; it is not a pipeline in which each later layer overrides the earlier one.
@@ -565,13 +564,7 @@ I use code whenever success can be expressed as an invariant over observable evi
 
 These checks are attractive because their behavior is legible. The same evidence produces the same result. When a code grader fails, I can inspect the assertion and know exactly which contract was violated. I can run it on every pull request and every trace at a cost close to zero.
 
-Even a crude regular expression can expose a real agent failure. Suppose an internal support agent must consult the tenant's current refund policy before stating an eligibility window. A trace-level check could be as simple as searching for the required tool call:
-
-```python
-used_current_policy = bool(
-    re.search(r'"name"\s*:\s*"lookup_refund_policy"', trace_json)
-)
-```
+Even a crude regular expression can expose a real agent failure. Suppose an internal support agent must consult the tenant's current refund policy before stating an eligibility window. A trace-level check could simply search the trace JSON for the required `lookup_refund_policy` tool call.
 
 The agent answers, "You are eligible for a refund within 30 days," without calling the tool. The regex fails the run. It does not know whether 30 days is correct. It catches a different and more directly observable failure: the agent made a policy claim without consulting the source of truth it was required to use.
 
@@ -642,7 +635,7 @@ The human decision should then flow back down the stack. If reviewers repeatedly
 
 A practical routing rule is:
 
-<p class="concept-equation">Use code when the contract is explicit. Use an LLM when the contract is semantic. Use a human when the contract or the truth is still uncertain.</p>
+**Use code when the contract is explicit. Use an LLM when the contract is semantic. Use a human when the contract or the truth is still uncertain.**
 
 Most mature eval suites are therefore hybrids. They use deterministic checks broadly, model judges selectively, and human review strategically. Multiple layers can score the same run because they protect different boundaries. A refund response may pass the tone rubric, fail the exact amount assertion, and be escalated because the underlying policy is ambiguous. Reducing those results to one average would erase the reason the stack exists.
 
