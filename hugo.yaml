@@ -70,20 +70,16 @@ params:
       and the ideas worth keeping.
 
   socialIcons:
-    - name: github
-      url: "https://github.com/tgialac"
-    - name: linkedin
-      url: "https://www.linkedin.com/in/YOUR-LINKEDIN"
     - name: x
       url: "https://x.com/YOUR-X-HANDLE"
-    - name: facebook
-      url: "https://www.facebook.com/YOUR-FACEBOOK"
-    - name: googlescholar
-      url: "https://scholar.google.com/citations?user=YOUR-SCHOLAR-ID"
+    - name: linkedin
+      url: "https://www.linkedin.com/in/YOUR-LINKEDIN"
     - name: whatsapp
       url: "https://wa.me/YOUR-PHONE-NUMBER"
-    - name: discord
-      url: "https://discord.com/users/YOUR-DISCORD-ID"
+    - name: googlescholar
+      url: "https://scholar.google.com/citations?user=YOUR-SCHOLAR-ID"
+    - name: github
+      url: "https://github.com/tgialac"
     - name: email
       url: "mailto:work.trangialac@gmail.com"
 
