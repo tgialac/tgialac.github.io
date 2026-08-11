@@ -642,3 +642,136 @@ Most mature eval suites are therefore hybrids. They use deterministic checks bro
 The cheapest judge that works is not merely a cost optimization. It is usually the judge with the shortest path from evidence to decision. When code can inspect the truth directly, adding a model makes the test less certain. When meaning cannot be expressed as an invariant, refusing model judgment creates brittle proxies. When neither code nor the model has the necessary knowledge, only a qualified human can establish the label.
 
 The question is not **Which judge is best?** It is **Which judge can decide this contract from the evidence available, at the reliability and cost the consequence requires?**
+
+## 7. Correctness Is Not Faithfulness
+
+Consider a research agent that receives a set of retrieved documents and produces an answer that accurately summarizes them. Every claim in the answer can be traced to a sentence in the supplied context. The citations are relevant. Nothing was invented.
+
+The answer is **faithful**.
+
+But what if the retrieved documents are stale, incomplete, or wrong?
+
+The agent may have represented its evidence perfectly while still giving the user a false answer. Faithfulness tells me whether the output stays within the provided context. Correctness tells me whether the output is true with respect to the world, an authoritative source of truth, or a validated reference answer.
+
+**Faithfulness(output, context) ≠ Correctness(output, world)**
+
+The distinction looks obvious when written this way, but it is routinely erased by evaluation prompts. A grader is asked, "Is this answer correct according to the context?" That question can test support from the context. It cannot establish that the context itself is correct. Calling the resulting score **correctness** does not give the evaluator access to reality.
+
+Research on retrieval-augmented question answering has treated the two dimensions separately: correctness asks whether the response satisfies the user's information need, while faithfulness asks whether the response is based on the supplied knowledge. [Evaluations of retriever-augmented instruction-following models](https://arxiv.org/abs/2307.16877) found that systems can perform competitively on correctness while still struggling to stay faithful to the provided knowledge. One property does not imply the other.
+
+### Two Different Evidence Relationships
+
+For the operational definition I use here, a claim is faithful when the supplied context supports it. A faithfulness evaluator therefore needs three things:
+
+- the agent's output,
+- the context that was available to the agent,
+- a rule for deciding whether each output claim follows from that context.
+
+It does not need to know whether the context describes the world accurately. If a retrieved document says a product launched in March and the agent says it launched in March, the claim is faithful to that document. The faithfulness contract has been satisfied.
+
+A correctness evaluator needs a different evidence set. It must compare the output with something that is allowed to establish truth for the task: a gold answer, an authoritative database, a current API result, a verified knowledge base, or a qualified human judgment. For long-form answers, a single reference string is often insufficient. [FActScore](https://aclanthology.org/2023.emnlp-main.741/) addresses this by decomposing a generation into atomic claims and measuring how many are supported by a reliable knowledge source.
+
+The mechanics can look nearly identical: decompose the answer into claims, retrieve evidence, and verify each claim. The difference is where the evidence comes from. Work on faithfulness and factuality in retrieval-augmented systems makes this distinction explicit: [faithfulness checks claims against the passages supplied to the model, while factuality retrieves evidence from a broader knowledge base](https://aclanthology.org/anthology-files/pdf/climatenlp/2025.climatenlp-1.17.pdf).
+
+This produces four possible outcomes:
+
+| | **Correct in the world** | **Incorrect in the world** |
+| --- | --- | --- |
+| **Faithful to context** | The context is accurate and the answer uses it correctly | The answer accurately repeats stale, incomplete, or false context |
+| **Unfaithful to context** | The answer reaches the truth from memory or another source that was not provided | The answer is unsupported and wrong |
+
+Only the top-left cell is the ideal RAG behavior. The other three cells describe different failures and require different fixes.
+
+If the answer is faithful but incorrect, changing the generation prompt may do nothing. The failure is likely in retrieval, source quality, freshness, or the authority assigned to a document. If the answer is correct but unfaithful, the user happened to receive the right result, but the system cannot show that it came from the evidence it was supposed to use. That may be acceptable for a casual question and unacceptable for a legal, financial, medical, or internal-policy workflow.
+
+Correctness and faithfulness are therefore not competing scores. They protect different boundaries.
+
+### A Faithful Answer From a Stale World
+
+Suppose a research agent is asked at 09:00 UTC:
+
+> How many customer-facing incidents are currently open in the EU region?
+
+The retrieval layer provides an operations snapshot generated at 08:30 UTC:
+
+> Four customer-facing incidents are open in the EU region.
+
+The agent answers:
+
+> There are four open customer-facing incidents in the EU region.
+
+Every word that matters is supported by the supplied context.
+
+- **Faithfulness: ✅** The output follows directly from the retrieved snapshot.
+- **Correctness: unknown from this context alone.** The word *currently* requires state at 09:00 UTC, not at 08:30 UTC.
+
+If two incidents were resolved at 08:45 UTC, the answer is faithful and wrong. The model did not hallucinate. The retrieval system supplied stale evidence for a time-sensitive question, and the agent failed to recognize that the evidence could not support the requested time boundary.
+
+This example exposes a third contract that a single answer score would hide: **context adequacy**. Before asking whether the model used the context faithfully, I should ask whether the context was sufficient, current, and authoritative enough to answer the question at all.
+
+For a RAG or agent system, I can separate the responsibilities:
+
+| Component | Evaluation question |
+| --- | --- |
+| **Source and retrieval** | Did the system provide evidence that was relevant, sufficient, authoritative, and fresh enough? |
+| **Generation** | Did the output remain faithful to the evidence actually provided? |
+| **End-to-end outcome** | Was the resulting answer correct with respect to the task's source of truth? |
+
+The agent can pass the generation contract while the application fails end to end. That is exactly why the first broken contract matters more than the final symptom.
+
+### The 0/15 Correctness Score
+
+Now consider an eval slice of fifteen tasks that explicitly require current data from internal systems. In each case, the agent calls the appropriate live tool and answers from the returned state. One user asks which service regions are degraded. The agent calls the status tool, receives `us-east-1` and `ap-southeast-2`, and reports those two regions without adding anything else.
+
+The faithfulness judge receives each answer together with its tool result. It can verify that every output in the slice follows the evidence available to the agent:
+
+- **Faithfulness judge: 15/15**
+
+The correctness judge receives only each user question and final answer. It has no access to the internal systems, and its reference data predates the events. It cannot verify any of the fifteen answers and returns:
+
+- **Correctness judge: 0/15**
+
+The scores look like a contradiction. They are actually a description of two different information boundaries.
+
+The faithfulness judge had the evidence required for its question: *Did the answer follow the tool result?* The correctness judge did not have the evidence required for its question: *Were these the regions degraded at that moment?* Its zero is not strong evidence that the agent was wrong. It is evidence that the evaluator could not verify the answer from what it was given.
+
+This is a dangerous failure mode because the number still looks objective. A team may respond by tuning the agent to satisfy the correctness grader: removing current facts the grader does not recognize, preferring older claims from its parametric knowledge, or hedging correct answers until they resemble the reference set. The metric improves while the product becomes less useful.
+
+The proper outcome for the correctness judge in this setup is not necessarily **fail**. It may be **not evaluable from available evidence**. If the task depends on live internal state, the evaluator needs a timestamped snapshot of that state, access to the same authoritative tool, or a reference captured at execution time. Without one of those, the test does not contain a ground truth.
+
+### The Evaluator Has an Information Boundary Too
+
+It is easy to focus on whether the agent had enough context and forget that the evaluator is another information-processing system with its own boundary.
+
+An evaluator can judge only relationships that are visible in its inputs. Given output and context, it can test groundedness. Given output and a verified reference, it can test agreement with that reference. Given output and live environment state, it can test current correctness. Given only output and a rubric, it can assess qualities such as clarity or style, but any factual judgment depends on the evaluator's uncertain parametric knowledge.
+
+This yields a practical design rule:
+
+**Do not ask a judge to evaluate correctness unless it can see the source of truth that defines correctness for the task.**
+
+The source of truth changes by product:
+
+- For a math problem, it may be an independently verified solution or executable checker.
+- For a support policy, it may be the effective policy version for that customer and date.
+- For a database question, it may be a snapshot or query result from the relevant transaction boundary.
+- For current research, it may be authoritative sources with publication dates and explicit coverage requirements.
+- For an open-ended expert task, it may require domain-expert review rather than a generic model judge.
+
+Even a supplied citation deserves care. A citation can support a claim while failing to be the reason the model produced it. Research on RAG attribution calls this **post-rationalization**: the model may generate from prior knowledge and attach a superficially compatible citation afterward. Experiments have found substantial rates of such unfaithful attribution, reinforcing that [citation support and genuine reliance on evidence are separate questions](https://arxiv.org/abs/2412.18004).
+
+For most application evals, I cannot observe the model's internal causal process directly. I can still test the operational contract available to me: whether every material claim is supported by the context supplied, whether required evidence was retrieved before the claim was made, and whether perturbing or removing that evidence changes the behavior as expected. The important point is to state exactly which form of faithfulness the evaluator measures rather than using the word as a general synonym for truth.
+
+### Choose the Evaluation Question Before Tuning the Evaluator
+
+When a correctness and faithfulness score disagree, my first response should not be to rewrite the judge prompt. I should ask four questions:
+
+1. **What relationship is this metric intended to test?** Output to context, output to reference, or output to current world state?
+2. **What evidence did the agent have?** Retrieved passages, tool results, database state, or only model memory?
+3. **What evidence did the evaluator have?** Was it at least as current and authoritative as the evidence available to the agent?
+4. **Which component owns the failure?** Retrieval, source freshness, generation, the reference set, or the evaluator itself?
+
+Only after those questions are answered does evaluator tuning make sense. Otherwise I may optimize agreement with a judge that is answering the wrong question.
+
+Faithfulness is valuable because it makes the agent accountable to the evidence it received. Correctness is valuable because users ultimately care whether the answer is true. Neither metric subsumes the other, and neither can be interpreted without its evidence boundary.
+
+**A faithful answer can still be wrong. A correct answer can still be unsupported. And a judge without the relevant truth can score only its own ignorance.**
