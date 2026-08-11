@@ -519,3 +519,133 @@ Early in development, a small set of carefully reviewed traces is often more val
 The result is an eval suite built from evidence rather than fashion. It does not begin with ten popular LLM metrics. It begins with the system's actual trajectories, the failures people care about, and a precise answer to the question **"What would success have looked like here?"**
 
 Only then do I write the grader.
+
+## 6. The Evaluation Stack: Use the Cheapest Judge That Works
+
+Once the requirement and its evidence are clear, the next question is not **Which model should judge this?** It is **What is the cheapest evaluator that can make this decision reliably?**
+
+Agent evaluations usually draw from three layers:
+
+1. **Code-based evaluation:** deterministic checks over outputs, traces, and environment state.
+2. **LLM-as-a-judge:** model-based judgment for semantic properties that are difficult to reduce to fixed rules.
+3. **Human evaluation:** expert judgment for ambiguous, novel, high-risk, or poorly calibrated cases.
+
+These layers differ in cost, latency, scalability, and the kinds of evidence they can understand. They should not be read as a maturity ladder. Human evaluation is not automatically the best grader for every property, and an LLM judge is not a more advanced version of a unit test. The useful ordering is an **escalation ladder**: begin with the most direct and reproducible test, then pay for more judgment only when the requirement demands it.
+
+| Layer | Best suited for | Main advantage | Main limitation |
+| --- | --- | --- | --- |
+| **Code** | exact contracts, state, structure, tool use, cost, latency | fast, cheap, reproducible | cannot infer open-ended meaning well |
+| **LLM judge** | semantic correctness, groundedness, completeness, tone | scalable judgment over natural language | probabilistic, biased, bounded by its context and knowledge |
+| **Human** | novel edge cases, domain expertise, high-stakes decisions, calibration | can apply context, expertise, and product judgment | expensive, slow, and not perfectly consistent |
+
+[Anthropic describes agent evals](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) using the same three grader families: code-based, model-based, and human. The important design choice is not to select one family for the entire application. It is to attach the cheapest competent judge to each contract.
+
+The diagram below zooms in on the transition from model judgment to human review. A test case supplies the input, output, retrieval context, and other evidence to an LLM scorer. The scorer returns a score and, optionally, a reason. A threshold handles clear cases automatically. Borderline cases move to a human, whose decision can resolve the case and later improve the rubric or threshold.
+
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/llm-evaluation-metric-human-escalation.png" alt="An LLM test case is scored by an LLM judge, checked against a pass threshold, and escalated to human evaluation for edge cases.">
+  <figcaption>An LLM judge can automate the middle of the stack, while uncertain or consequential cases are escalated to human review.</figcaption>
+</figure>
+
+The image is not a complete execution order. Code checks may run before the model judge, after it, or beside it. A failed schema validation does not need to wait for a model score. A forbidden production write should fail the run even if both the LLM judge and a human reviewer like the final answer. The stack combines independent evidence; it is not a pipeline in which each later layer overrides the earlier one.
+
+### Layer 1: Code-Based Evals
+
+Code-based evals include more than unit tests. They include exact and fuzzy string matching, regular expressions, schema validation, static analysis, assertions over tool calls, database state checks, ordering constraints in a trace, and thresholds for cost or latency. The [OpenAI grader API](https://developers.openai.com/api/reference/resources/graders) reflects this range with string checks, text-similarity graders, Python graders, model graders, and compositions of multiple graders.
+
+I use code whenever success can be expressed as an invariant over observable evidence:
+
+- Did the response parse as the required JSON schema?
+- Did the agent call `verify_identity` before `issue_refund`?
+- Does `issue_refund.amount` equal the duplicated charge amount?
+- Was a forbidden tool ever called?
+- Does the promised artifact exist at the returned path?
+- Did the run remain below the token, latency, and cost budgets?
+- Does the output contain a required identifier or a prohibited pattern?
+
+These checks are attractive because their behavior is legible. The same evidence produces the same result. When a code grader fails, I can inspect the assertion and know exactly which contract was violated. I can run it on every pull request and every trace at a cost close to zero.
+
+Even a crude regular expression can expose a real agent failure. Suppose an internal support agent must consult the tenant's current refund policy before stating an eligibility window. A trace-level check could be as simple as searching for the required tool call:
+
+```python
+used_current_policy = bool(
+    re.search(r'"name"\s*:\s*"lookup_refund_policy"', trace_json)
+)
+```
+
+The agent answers, "You are eligible for a refund within 30 days," without calling the tool. The regex fails the run. It does not know whether 30 days is correct. It catches a different and more directly observable failure: the agent made a policy claim without consulting the source of truth it was required to use.
+
+Now give only the conversation to a general-purpose **correctness judge**. The answer is fluent, plausible, and consistent with common refund policies. The judge may pass it. But this tenant's current policy allows 14 days, and the judge was never given that private knowledge. It cannot verify a fact it does not possess. Worse, its broad prior knowledge may make the incorrect answer sound more credible.
+
+The simple check therefore catches the missing evidence contract while the semantically richer judge misses the factual error. This is not a paradox. The two graders have access to different evidence and answer different questions.
+
+Code-based evals become weak when I ask them to infer meaning indirectly. A regex can confirm that a citation-shaped string exists; it cannot establish that the cited source supports the claim. Exact match can verify a known account ID; it cannot decide whether an explanation is sufficiently clear for a confused customer. String similarity can reward lexical overlap while missing a contradiction. The boundary is simple: **use code for properties that are already explicit in data, state, or structure; do not force semantic judgment into a brittle proxy.**
+
+### Layer 2: LLM-as-a-Judge
+
+An LLM judge is useful when valid outputs can vary widely but the acceptance criteria can still be described in language. It can read a response, trace, reference answer, or retrieval context and apply a rubric for properties such as:
+
+- whether a summary preserves the important facts,
+- whether claims are supported by the supplied evidence,
+- whether an explanation is coherent and complete,
+- whether the response follows a nuanced instruction,
+- whether the tone is appropriate for the situation,
+- whether a tool trajectory appears wasteful or confused when no crisp rule captures the pattern.
+
+This layer occupies the large space between exact assertions and manual review. It is far cheaper and faster than asking a person to inspect every run, and it can return a structured score plus a reason that helps with debugging. For open-ended applications, that makes evaluation at useful scale possible.
+
+But **LLM-as-a-Judge is not the “advanced” replacement for code evals.** It is a different layer for a different kind of contract.
+
+A model judge introduces another nondeterministic system into the test harness. Its decision can change with the model version, prompt, response order, rubric wording, supplied reference, and sampling configuration. Research has documented [position bias in pairwise LLM judging](https://aclanthology.org/2025.ijcnlp-long.18/): swapping where two answers appear can change the preference even though their content is unchanged. Other observed failure modes include preferences related to verbosity, style, and model family.
+
+More fundamentally, a judge cannot reliably grade against knowledge it does not have. A study of expert tasks in dietetics and mental health found that subject-matter experts agreed with LLM judges on overall preference only [68 percent and 64 percent of the time](https://arxiv.org/abs/2410.20266), respectively. A broader study across twenty NLP evaluation tasks likewise found substantial variation across models, datasets, evaluated properties, and required expertise, concluding that model judges should be [validated against human judgments before use](https://aclanthology.org/2025.acl-short.20/).
+
+The remedy is not simply to choose a larger judge. I need to design its evidence contract as carefully as I designed the agent's:
+
+1. **Give it the relevant evidence.** If correctness depends on a policy, retrieved document, database record, or reference answer, include that material. Do not ask the judge to reconstruct private or current truth from parametric memory.
+2. **Narrow the rubric.** “Rate quality from 1 to 5” asks the model to invent the standard. A rubric should name the criterion, the evidence to inspect, the pass boundary, and the behavior to take under uncertainty.
+3. **Prefer separate judgments.** Correctness, groundedness, tone, and completeness can fail independently. One overall score hides disagreement among them.
+4. **Test the judge on labeled edge cases.** Measure false passes and false failures against domain-expert decisions, especially near the production threshold.
+5. **Monitor judge drift.** A model or prompt update changes the evaluator itself. The judge needs versioning and regression cases just like the task it grades.
+
+The LLM's optional reason in the diagram is useful as an audit artifact, not as proof that the score is correct. A polished explanation can rationalize a bad judgment as fluently as an agent can rationalize a bad action. I should validate the decision against labeled cases, not trust it because the rationale sounds thoughtful.
+
+### Layer 3: Human Evaluation
+
+Human evaluation is the most expensive layer, so it should be spent where human judgment changes the answer.
+
+I need people when the requirement depends on expertise absent from the model, when stakeholders have not yet agreed on the boundary, when a case is novel enough that the rubric does not cover it, or when the consequence of a false pass is too high to delegate without review. Humans are especially important for:
+
+- defining what good behavior means before automation,
+- labeling a representative calibration set,
+- adjudicating disagreements between graders,
+- reviewing low-confidence and near-threshold cases,
+- inspecting rare, high-severity failures,
+- evaluating domain-specific correctness and subtle user harm,
+- auditing whether the automated stack has drifted away from product intent.
+
+Human evaluation is not an oracle. Reviewers can disagree, become fatigued, interpret vague rubrics differently, and bring their own biases. More reviewers do not repair an underspecified requirement. A useful human process still needs a clear rubric, access to the same source evidence, examples at the decision boundary, and an adjudication path for disagreement.
+
+The key difference is that a human reviewer can notice that the question itself is wrong. A code grader executes its assertion. An LLM judge applies its rubric. A domain expert can say that the rubric omits an exception, that the source is obsolete, that two stakeholder requirements conflict, or that a new failure class deserves its own evaluator. This makes humans not only the final layer of the stack, but also the mechanism that improves the layers below it.
+
+### Escalate Uncertainty, Not Every Case
+
+The threshold in the diagram is useful only if it creates three regions rather than pretending every score is equally certain:
+
+- **Clear pass:** automated evidence strongly supports success.
+- **Clear fail:** one or more important contracts are violated.
+- **Review region:** the score is near the boundary, graders disagree, evidence is incomplete, or the expected harm requires human confirmation.
+
+This lets human effort follow information value. Reviewing the thousandth obvious schema failure teaches me little. Reviewing a novel case where the code checks pass, the groundedness judge passes, the correctness judge fails, and the user reports harm may reveal a missing requirement or an entire new failure class.
+
+The human decision should then flow back down the stack. If reviewers repeatedly apply the same crisp rule, I can encode it as a code check. If they repeatedly make the same semantic distinction, I can add labeled examples and refine the LLM rubric. If they continue to disagree, the requirement may not yet be automatable—and the disagreement is valuable evidence rather than noise to hide.
+
+A practical routing rule is:
+
+<p class="concept-equation">Use code when the contract is explicit. Use an LLM when the contract is semantic. Use a human when the contract or the truth is still uncertain.</p>
+
+Most mature eval suites are therefore hybrids. They use deterministic checks broadly, model judges selectively, and human review strategically. Multiple layers can score the same run because they protect different boundaries. A refund response may pass the tone rubric, fail the exact amount assertion, and be escalated because the underlying policy is ambiguous. Reducing those results to one average would erase the reason the stack exists.
+
+The cheapest judge that works is not merely a cost optimization. It is usually the judge with the shortest path from evidence to decision. When code can inspect the truth directly, adding a model makes the test less certain. When meaning cannot be expressed as an invariant, refusing model judgment creates brittle proxies. When neither code nor the model has the necessary knowledge, only a qualified human can establish the label.
+
+The question is not **Which judge is best?** It is **Which judge can decide this contract from the evidence available, at the reliability and cost the consequence requires?**
