@@ -793,3 +793,82 @@ An overall release decision can still exist, but it should be a transparent poli
 Separate evaluators also make the stack from Section 6 practical. `format_eval` may be code. `faithfulness_eval` may be an LLM supplied with retrieval context. `accuracy_eval` may combine a reference check with expert review. The dimensions can share infrastructure without sharing a verdict.
 
 **One evaluator should answer one evaluation question.** That is what makes calibration possible, failures localizable, and improvements attributable to the part of the system that actually changed.
+
+## 10. Who Evaluates the Evaluator?
+
+Up to this point, evaluation has looked like the layer that tells me whether the agent is good. I run the application, pass its behavior to a grader, and receive a score. The score becomes the evidence I use to change prompts, compare models, block releases, and claim improvement.
+
+But the moment that grader is another language model, the argument turns back on itself.
+
+**I have used AI to judge AI. Why should I trust the judge?**
+
+An LLM judge can misunderstand the rubric, miss a subtle failure, invent a reason for the wrong verdict, or apply the threshold differently after a model update. A plausible score is still a model output. Treating it as ground truth simply moves the original reliability problem one layer higher.
+
+The evaluator must therefore become an evaluated system too.
+
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/llm-judge-human-meta-evaluation.png" alt="The same output is evaluated by an LLM judge and a human, their verdicts are compared, and the results are organized into true positive, false positive, false negative, and true negative outcomes.">
+</figure>
+
+The mental model is simple. Give the same examples to the LLM judge and to qualified human reviewers. Treat the adjudicated human labels as the operational ground truth for the rubric. Then compare the two sets of verdicts.
+
+For the definitions below, **positive means that the evaluator flags a failure**:
+
+| Outcome | LLM judge | Human label | Meaning |
+| --- | --- | --- | --- |
+| **True positive (TP)** | Fail | Fail | The evaluator caught a real failure |
+| **False positive (FP)** | Fail | Pass | The evaluator raised a false alarm |
+| **False negative (FN)** | Pass | Fail | The evaluator missed a real failure |
+| **True negative (TN)** | Pass | Pass | The evaluator correctly accepted a good run |
+
+The naming matters less than the consequences. A false positive creates noise. Engineers investigate a run that was acceptable, dashboards look worse than the product, and good changes may be blocked. A false negative is a failure that escapes detection. The eval says the system is safe to ship when a human reviewer would have rejected it.
+
+For many agent applications, false negatives are the more dangerous error. A faithfulness judge that misses an unsupported claim, a safety judge that passes a prohibited action, or a tool-use judge that overlooks a production write can create confidence precisely where caution was required.
+
+### Precision: Can I Trust an Alert?
+
+**Precision = TP / (TP + FP)**
+
+Precision asks: **Of all the runs the evaluator flagged, how many were real failures?**
+
+High precision means a failed eval is usually worth investigating. Low precision means the judge generates many false alarms. The team may begin ignoring failures, manually rerunning cases until they pass, or weakening the threshold merely to make the dashboard usable.
+
+Precision is especially important when every alert creates expensive human review. If a domain expert must spend thirty minutes adjudicating each flagged medical or legal response, a noisy evaluator consumes scarce expertise without proportionate value.
+
+### Recall: How Many Failures Did I Catch?
+
+**Recall = TP / (TP + FN)**
+
+Recall asks: **Of all the real failures in the human-labeled set, how many did the evaluator catch?**
+
+High recall means few failures escape. Low recall means the evaluator looks calm because it does not notice enough. For safety, authorization, privacy, and other high-severity contracts, recall is often the first priority: a false alarm can be reviewed, while a false pass may reach production.
+
+Precision and recall pull attention toward different risks. Tightening a threshold may catch more failures and improve recall while also flagging more acceptable runs and reducing precision. Loosening it may make each alert more credible while allowing more failures through. There is no universally correct balance. The consequence of each error should determine the threshold.
+
+Consider a human-labeled set of 100 runs containing 20 real failures. The judge catches 15 of them, misses 5, and incorrectly flags 10 good runs. Its overall accuracy is 85%, which sounds strong. But its precision is only 60%, and its recall is 75%. One in four real failures escapes, and two in five alerts are noise. The confusion matrix tells me much more than the attractive 85% headline.
+
+### Meta-Evaluate Each Evaluator
+
+Section 9 separated the god evaluator into dimensions such as accuracy, faithfulness, actionability, safety, and format. Each model-based evaluator now needs its own labeled test set.
+
+A practical meta-evaluation loop is:
+
+1. **Build a calibration set.** Include ordinary passes, known failures, difficult boundary cases, and examples from the production slice where the evaluator will run.
+2. **Collect human labels.** Give reviewers the same rubric and the evidence required by that rubric. Use domain experts where correctness depends on specialized knowledge.
+3. **Adjudicate disagreements.** If qualified humans interpret the boundary differently, the rubric or requirement may still be underspecified.
+4. **Run the evaluator blind.** Freeze its prompt, model version, evidence, and threshold before comparing its verdicts with the human labels.
+5. **Measure its errors.** Inspect the confusion matrix, Precision, Recall, and—most importantly—the actual false-positive and false-negative cases.
+6. **Tune on calibration data, then test on held-out data.** Otherwise I can overfit the evaluator to the examples used to repair it.
+7. **Repeat after changes.** A new judge model, rubric, prompt, data distribution, or product behavior can invalidate the previous calibration.
+
+This process is **meta-evaluation**: an evaluation of the evaluator. A 2026 analysis of agreement metrics for LLM judges recommends reporting the confusion matrix alongside metrics such as Precision and Recall, and explicitly documenting how ties, invalid outputs, and abstentions are handled. Those choices change what the reported number means. [The paper provides a reporting checklist for judge–human validation](https://arxiv.org/abs/2606.00093).
+
+Human labels are not metaphysical truth. Reviewers can make mistakes, disagree, or lack the evidence required for the decision. The goal is an operational ground truth: labels produced by the people authorized to define the product boundary, using a clear rubric and an adjudication process. If humans cannot label the cases consistently, training a model judge to imitate them will not repair the ambiguity.
+
+This is also how automated judges should be positioned in practice. For GDPval, OpenAI defines pairwise human-expert preference as the grading standard and describes the LLM-based judge as a way to obtain a rough estimate of model performance. [The expert process remains the standard against which automation is interpreted](https://evals.openai.com/gdpval/grading).
+
+The human layer does not need to review every production run forever. Humans define the rubric, create the labeled calibration set, adjudicate difficult disagreements, audit drift, and periodically test whether the automated judge still represents their decisions. Automation scales the judgment only after that relationship has been measured.
+
+This is the turning point in the evaluation stack. The LLM judge is not an authority outside the system. It is a classifier with inputs, labels, thresholds, blind spots, and measurable error.
+
+**An eval suite is not trustworthy because it contains an evaluator. It becomes trustworthy when the evaluator's own failures are visible, measured, and bounded.**
