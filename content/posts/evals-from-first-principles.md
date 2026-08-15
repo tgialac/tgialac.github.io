@@ -1151,7 +1151,76 @@ This closes a gap that offline-only evaluation leaves open. A pre-release suite 
 
 The [Airbnb engineering case study](https://airbnb.tech/ai-ml/eval-driven-development-lessons-from-evaluating-genai-at-scale/) does not supply a universal formula for evals; it supplies a concrete organizational pattern. Start close to the data, make product judgment explicit, automate only calibrated distinctions, improve the system under controlled comparisons, and keep learning after deployment.
 
-## 13. Conclusion
+## 13. How Much Evidence Is Enough?
+
+The harness in Section 8 can produce repeated trials, slice-level scores, and a candidate-versus-baseline comparison. It still leaves one question unanswered: **when is an observed improvement large and stable enough to justify a decision?**
+
+Suppose a candidate passes 83% of the suite and production passes 80%. The three-point difference is not self-interpreting. It could represent a real improvement, a lucky set of trajectories, a different mixture of easy and difficult tasks, correlated failures from one task family, or grader noise. More decimal places would make the estimate look more precise without creating more evidence.
+
+The point estimate is only the beginning. I also need to define what I am estimating, identify where the variation comes from, and report how uncertain the comparison remains.
+
+### Define the Claim Before the Statistic
+
+A score on a fixed set can support a narrow claim:
+
+> On these cases, with these graders and this trial protocol, the candidate performed better than the baseline.
+
+The product claim is usually broader:
+
+> On future requests drawn from the traffic we care about, the candidate will perform at least as well as the baseline.
+
+Those are different targets. NIST calls the first **benchmark accuracy** and the second **generalized accuracy**. The first conditions on the cases that happened to be selected. The second treats them as evidence about a larger population of similar situations. [NIST AI 800-3 shows that the two targets require different assumptions and can produce materially different uncertainty](https://www.nist.gov/publications/expanding-ai-evaluation-toolbox-statistical-models).
+
+A hand-curated regression set is excellent evidence about those exact contracts. It is weak evidence about the frequency of failures in production because rare, severe incidents are intentionally overrepresented. A random or properly weighted production sample can support a traffic-level estimate, but may contain too few high-risk cases to test a safety boundary. Before calculating an aggregate, I should therefore write down:
+
+- the population the result is intended to describe,
+- the unit being sampled: trial, task, session, customer, or task family,
+- how cases and slices are selected or weighted,
+- the minimum improvement or maximum regression that matters to the release decision.
+
+Without that statement, an interval around the score can be statistically correct and still answer the wrong product question.
+
+### Tasks and Trials Create Different Uncertainty
+
+Repeated trials estimate how nondeterministic the agent is on the cases I already have. More trials on the same refund fixture can narrow my estimate of success on that fixture. They do not tell me whether the suite contains the refund situations real users will generate next month.
+
+Adding tasks addresses a different source of uncertainty: variation across situations. In an agent eval, observations are often nested:
+
+<p class="concept-equation">Task family → Task → Trial</p>
+
+Trials of the same task share its wording, state, and grader. Tasks in the same family may share a template, policy boundary, or failure mechanism. Treating every trial as an independent row exaggerates the effective sample size. Ten retries of one case do not provide the same coverage as ten independently selected cases.
+
+This is why mature evaluations report uncertainty at the level where the claim is meant to generalize. METR, for example, uses a hierarchical bootstrap over task families, tasks, and attempts in agent evaluations rather than flattening every run into one independent observation. [Its Claude 3.7 methodology makes that hierarchy explicit](https://metr.org/evaluations/claude-3-7-report/). NIST similarly decomposes variation within a question from variation between questions; two systems with the same average can have very different consistency profiles.
+
+The practical allocation rule is simple. If the same cases flip between pass and fail, spend more budget on repeated trials and environment stability. If performance is stable within a case but varies sharply across cases or slices, add broader tasks. Anthropic makes the same distinction operationally: 20–50 tasks can reveal large effects early, while a mature system needs more and harder cases to detect smaller improvements. [Sample size should grow with the subtlety of the decision, not with a universal magic number](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents).
+
+### Compare Candidates on the Same Evidence
+
+The most efficient comparison runs the baseline and candidate on the same tasks, fixtures, budgets, and grader versions. For each task, I calculate the candidate-minus-baseline difference, then aggregate those paired differences. Easy and hard cases affect both systems, so pairing removes part of the variation caused by the particular dataset draw.
+
+I then want an uncertainty interval around the **difference**, not merely two intervals around two separate scores. A paired bootstrap can resample tasks—or task families first when cases are clustered—while preserving all trials belonging to the sampled unit. The resulting distribution answers the decision question directly: across plausible resamples of the evidence, how large could the candidate's gain or loss be?
+
+This also changes how I inspect results. The most informative rows are not only the failures. They are the **discordant cases** where one system passes and the other fails. Those traces reveal what the candidate actually changed and whether the aggregate gain came from the intended behavior, an accidental shortcut, or a trade-off hidden in another slice.
+
+### Let the Decision Rule Determine the Evidence Budget
+
+The release rule should be defined before I see which candidate is ahead. A practical comparison can end in three states:
+
+| Result | Interpretation | Action |
+| --- | --- | --- |
+| The interval clears the required improvement margin | Evidence supports a meaningful gain | Continue to hard gates and controlled release |
+| The interval crosses both improvement and regression margins | The eval is inconclusive | Add tasks or trials where uncertainty is largest |
+| The interval falls below the tolerated regression boundary | Evidence supports a material loss | Reject or revise the candidate |
+
+The margin matters more than whether a p-value crosses a conventional threshold. A tiny but statistically detectable gain may not justify added cost or latency. A small possible regression may be unacceptable for authorization or state integrity. Critical safety cases should remain hard gates; a wide average interval must never wash out one observed catastrophic violation.
+
+Repeatedly checking the score and stopping the first time it looks favorable also inflates confidence. METR's evaluation protocol explicitly warns that adding runs until a confidence interval clears a safety threshold requires a correction for early stopping. [When the interval still crosses the decision boundary, the honest choices are to gather more evidence or take the conservative side of the gate](https://metr.org/blog/2024-03-15-example-autonomy-evaluation-protocol/).
+
+A defensible result therefore reports the claim, sampling frame, task and trial counts, harness errors, slice results, candidate-minus-baseline difference, uncertainty interval, and predeclared decision margin. It also preserves the traces behind the discordant cases.
+
+**A score describes what happened in the eval. An uncertainty-aware comparison describes how much the eval justifies believing beyond it.**
+
+## 14. Conclusion
 
 An agent does not “work” merely because it produced a convincing answer, completed a few demonstrations, or achieved a high aggregate score. It works only to the extent that its important behaviors have been specified, observed, and tested across the situations in which failure matters.
 
