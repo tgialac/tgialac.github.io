@@ -1,7 +1,7 @@
 ---
 title: "Evals from First Principles: How to Measure, Debug, and Improve AI Agents"
 date: 2026-08-10
-lastmod: 2026-08-11
+lastmod: 2026-08-15
 description: "A practical guide to evaluating AI agents through traces, targeted graders, repeated trials, release gates, and production feedback loops."
 summary: "How to turn agent failures into observable contracts, reliable evals, regression tests, and safer release decisions."
 tags: ["AI Agents", "LLM Evals", "Evaluation", "Observability"]
@@ -379,6 +379,8 @@ The better flow is:
 
 <p class="concept-equation">Traces → Failure Examples → Failure Taxonomy → Requirements → Evaluators</p>
 
+Airbnb describes the same sequencing as **eval-driven development**: prototype first, inspect outputs and traces, categorize the mistakes, and only then encode those observed failure modes as evals. Its practical recommendation is deliberately hands-on—run a prototype over roughly 100 inputs and read the outputs before investing in a scaled evaluation pipeline. [The point is discovery, not a magic sample size](https://airbnb.tech/ai-ml/eval-driven-development-lessons-from-evaluating-genai-at-scale/): early manual review prevents a team from scaling generic metrics that never represented the failures users encounter.
+
 Each transition removes a different kind of ambiguity.
 
 - **Traces** show what the application actually did.
@@ -743,7 +745,7 @@ An **evaluation harness** is the infrastructure around the eval. It provisions t
 
 ### Start With One Executable Case
 
-Consider the duplicate-charge failure from Section 5. A minimized case might look like this:
+The duplicate-charge scenario from Section 5 is an illustrative fixture, not a claimed production incident. A minimized case might look like this:
 
 <pre class="eval-spec" aria-label="Example evaluation case in YAML">id: refund_duplicate_charge
 input:
@@ -771,7 +773,7 @@ graders:
 metadata:
   slice: duplicate-charge
   severity: critical
-  source: production-incident
+  source: illustrative-fixture
 </pre>
 
 This row contains more than a prompt and a reference answer. It contains the state from which the agent must begin, the outcome that must become true, evidence the agent is required to consult, actions it must never take, and metadata that lets me report results for the relevant product slice.
@@ -992,6 +994,8 @@ Precision and recall pull attention toward different risks. Tightening a thresho
 
 Consider a human-labeled set of 100 runs containing 20 real failures. The judge catches 15 of them, misses 5, and incorrectly flags 10 good runs. Its overall accuracy is 85%, which sounds strong. But its precision is only 60%, and its recall is 75%. One in four real failures escapes, and two in five alerts are noise. The confusion matrix tells me much more than the attractive 85% headline.
 
+Airbnb offers a useful operational target: calibrate a virtual judge against expert labels until agreement reaches the high-80s to 90s, using measures such as Cohen's kappa or Krippendorff's alpha where appropriate. That is a **starting gate, not a certificate**. Agreement can look high on an imbalanced set where almost everything passes, so I still need the confusion matrix, per-class errors, and held-out cases. The target is valuable because it makes trust conditional on measured human alignment; the error analysis determines whether that alignment is safe enough for the intended use.
+
 ### Meta-Evaluate Each Evaluator
 
 Section 9 separated the god evaluator into dimensions such as accuracy, faithfulness, actionability, safety, and format. Each model-based evaluator now needs its own labeled test set.
@@ -1098,7 +1102,56 @@ The dataset does not merely measure the agent. It accumulates the domain decisio
 
 **A failure that is fixed but not preserved as a test is only temporarily understood.**
 
-## 12. Conclusion
+## 12. Case Study: Airbnb's Eval-Driven Development Loop
+
+Airbnb's account is useful because it connects the pieces in this article into one operating loop. The company reports using LLM-powered features across review highlights, customer support, and communication for guests and hosts. Product teams define their own criteria and workflows, while a central infrastructure team supplies common tooling and shares evaluation practices across domains. That division is important: **evaluation infrastructure can be centralized, but the definition of good behavior remains product-specific.**
+
+Airbnb explicitly describes its end-to-end walkthrough as a **fictionalized and simplified version of a real use case**, not as a controlled experiment or a universal production recipe. The scenario is a travel-support assistant that answers questions about platform policies. Its value is therefore methodological: it shows how a team can move from raw behavior to trustworthy monitoring without pretending that one generic score measures the product.
+
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/airbnb-eval-driven-development-workflow.png" width="1525" height="450" loading="lazy" decoding="async" alt="Airbnb's eval-driven development loop: explore, turn failures into evals, calibrate, improve the system, scale, monitor production, and feed discoveries back into exploration.">
+  <figcaption>Airbnb's eval-driven development workflow, redrawn by the author from the process described in its engineering case study.</figcaption>
+</figure>
+
+### Explore and Turn Failures Into Evals
+
+The walkthrough begins with 100 prototype inputs and manual review of every output. The review finds four distinct failure classes: 15 unsupported policy details, 8 answers that are correct but too verbose, 5 refusals of valid questions, and 3 malformed JSON responses. These counts are illustrative findings inside Airbnb's simplified walkthrough, not benchmark rates for its products.
+
+The next move is not to average those failures into a single quality score. The team attaches a suitable evaluator to each contract:
+
+| Observed failure | Contract | Evaluator |
+| --- | --- | --- |
+| Malformed JSON | The response must satisfy the output schema | Programmatic schema check |
+| Excessive length | The response must remain within a defined bound | Programmatic length check |
+| Unsupported policy detail | Claims must follow from the supplied policy evidence | Faithfulness virtual judge |
+| Unnecessary verbosity | The answer must be concise without losing required information | Conciseness virtual judge |
+| Over-refusal | Valid, answerable requests should not be rejected | Separate evaluator or expert review |
+
+This is failure-driven metric design in concrete form. Code handles explicit structure. Narrow model graders handle semantic boundaries. Subject-matter experts provide the labels that make those boundaries operational.
+
+### Calibrate the Evaluator, Then Improve the Product
+
+In Airbnb's example, a product or domain expert labels 60 cases, including bad outputs, to form a golden set. The initial faithfulness judge agrees with those labels 78% of the time. Disagreement analysis shows a specific defect: the judge treats accurate paraphrases as unsupported. After the rubric and few-shot examples are refined, agreement rises to 88%.
+
+The score increase is not the most important part. The disagreement revealed *how the evaluator was wrong*, and the labeled examples made the repair testable. Airbnb's broader guidance is to begin with tens rather than thousands of expert-labeled rows, include negative examples, stop when experts cannot agree on the label, and prefer roughly 3–5 well-calibrated virtual judges over 20–30 noisy metrics. One evaluator should own one correctness dimension, matching the anti–god-evaluator principle from Section 9.
+
+Only after the judge becomes credible does the team use it to improve the actual system. In the walkthrough, the product change is to retrieval, and faithfulness failures fall. Airbnb also recommends changing one experimental variable at a time: hold the model fixed while varying the prompt, then hold the prompt fixed while varying the model, and evaluate serving changes separately. That discipline makes attribution possible. A stable judge narrows the candidates; samples from strong candidates can then expose new evaluator weaknesses. The product and its evaluators improve together, but remain separately versioned systems with separate failure modes.
+
+### Scale Offline, Then Mirror the Evals in Production
+
+The final step expands the illustrative evaluation from the small golden set to 5,000 examples. The walkthrough then samples 5% of de-identified live traffic each day, applies programmatic checks and virtual judges, sends flagged outputs to human review, and holds a weekly product review. New production failure modes become new evals, which drive the next system change.
+
+Those figures are Airbnb's walkthrough parameters, not defaults every team should copy. Sampling should follow traffic volume, risk, privacy constraints, evaluator cost, and the rarity of the failures being sought. Airbnb also notes that live data is continuously sampled with privacy-preserving techniques, robustly de-identified before human review, and purpose-limited to safety and quality assurance. Production evaluation is a data-governance system as much as a scoring system.
+
+The general loop is the durable lesson:
+
+<p class="concept-equation">Explore → Encode Failures → Calibrate → Improve → Scale → Monitor → Explore</p>
+
+This closes a gap that offline-only evaluation leaves open. A pre-release suite protects the behaviors already known. Production monitoring discovers changes in language, traffic, policies, and failure modes that the suite cannot predict. Human review decides which discoveries represent real product failures. The resulting cases return to the dataset, so evaluation becomes a development practice rather than a one-time launch check.
+
+The [Airbnb engineering case study](https://airbnb.tech/ai-ml/eval-driven-development-lessons-from-evaluating-genai-at-scale/) does not supply a universal formula for evals; it supplies a concrete organizational pattern. Start close to the data, make product judgment explicit, automate only calibrated distinctions, improve the system under controlled comparisons, and keep learning after deployment.
+
+## 13. Conclusion
 
 An agent does not “work” merely because it produced a convincing answer, completed a few demonstrations, or achieved a high aggregate score. It works only to the extent that its important behaviors have been specified, observed, and tested across the situations in which failure matters.
 
