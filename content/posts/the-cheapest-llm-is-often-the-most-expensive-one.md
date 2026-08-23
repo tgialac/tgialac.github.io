@@ -25,21 +25,20 @@ Suppose a customer asks an AI support agent a question that looks easy enough fo
 
 The numbers below are illustrative, not a reported incident:
 
-```text
-Initial cheap model call       $0.001
-Router / verifier overhead     $0.004
-Retry with a stronger model    $0.015
-Extra tool and context steps   $0.030
-Human review / rework           $0.050
-                                ------
-Total path to resolution       $0.100
-```
+| Cost component | Illustrative cost |
+| --- | ---: |
+| Initial cheap model call | $0.001 |
+| Router / verifier overhead | $0.004 |
+| Retry with a stronger model | $0.015 |
+| Extra tool and context steps | $0.030 |
+| Human review / rework | $0.050 |
+| **Total path to resolution** | **$0.100** |
 
 The mistake is not that the small model was cheap. The mistake is treating the price of the first inference as the price of the task.
 
 An application does not buy tokens for their own sake. It buys a result: a support case resolved, a transaction explained, a document classified, or a piece of code that passes review. A useful cost model is therefore:
 
-<p class="concept-equation">\text{cost per successful outcome} = \frac{\text{initial calls} + \text{router} + \text{retries} + \text{tools} + \text{review}}{\Pr(\text{success})}</p>
+<p class="concept-equation">\[\text{cost per successful outcome} = \frac{\text{initial calls} + \text{router} + \text{retries} + \text{tools} + \text{review}}{\Pr(\text{success})}\]</p>
 
 This is why a more capable model can sometimes be cheaper in practice. It may cost more per call, but reach the quality bar in one attempt. Conversely, a cheaper model can be the expensive option when it creates enough uncertainty downstream.
 
@@ -51,31 +50,15 @@ In [Vercel's AI Gateway Production Index](https://vercel.com/blog/ai-gateway-pro
 
 That is not what a single-model architecture looks like.
 
-It looks more like a routing graph:
+It looks more like a routing graph, with each model occupying a role rather than competing for one universal leaderboard position:
 
-```text
-                         +------------------+
-                         | Cheap classifier |
-                         +--------+---------+
-                                  |
-                 +----------------+----------------+
-                 |                                 |
-                 v                                 v
-        +------------------+              +------------------+
-        | Fast model       |              | Strong model     |
-        | FAQ / extraction |              | reasoning / risk |
-        +--------+---------+              +--------+---------+
-                 |                                 |
-                 +----------------+----------------+
-                                  v
-                         +------------------+
-                         | Verifier / tool |
-                         +--------+---------+
-                                  |
-                         +--------v---------+
-                         | Fallback / human |
-                         +------------------+
-```
+| Role | Typical responsibility | Why it may be routed there |
+| --- | --- | --- |
+| Fast model | Intent classification, extraction, simple FAQ | Low latency and low cost |
+| Strong model | Ambiguous reasoning, policy interpretation, high-risk cases | Higher quality floor |
+| Specialist model | Embeddings, vision, summarisation, or tool selection | Capability fit |
+| Verifier | Grounding, schema, policy, or confidence checks | Decide whether to accept or escalate |
+| Fallback / human | Provider failure or unresolved uncertainty | Preserve availability and safety |
 
 Different models win different layers of the same application. A fast model may handle intent classification. A stronger one may reason over evidence. Another may be used for embeddings, vision, summarisation, or tool selection. The useful question is not “Which model is best?” but “Which model is appropriate for this request, under this budget and this risk profile?”
 
@@ -136,30 +119,14 @@ The user sees one sentence. A production system may need to:
 
 The question is one line. The execution is not.
 
-```text
-User request
-     |
-     v
-Identity -> Data policy -> Intent / capability routing
-                                  |
-                                  v
-                       Model + provider selection
-                                  |
-                                  v
-                         Inference + tool calls
-                                  |
-                    +-------------+-------------+
-                    |                           |
-                 Success                    Failure
-                    |                           |
-                    v                           v
-              Validate output          Retry / fallback
-                    |                           |
-                    +-------------+-------------+
-                                  |
-                                  v
-                         Response + audit trace
-```
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/gateway-tool-broker-architecture.png" width="1580" height="689" alt="Architecture showing autonomy policy, identity and attested intent, data labels and memory rules, and context trust segregation flowing through a gateway and tool broker into policy-based action, telemetry, human review, or a blocked and logged result.">
+  <figcaption>The gateway and tool broker form a complete mediation boundary: no model call or tool call bypasses the broker.</figcaption>
+</figure>
+
+The architecture makes the missing control point explicit. Autonomy policy, identity, data labels, memory rules, and context trust are inputs to mediation. The broker then turns them into one of three outcomes: an allowed action with telemetry, a human review or override, or a blocked, rolled-back, and logged attempt.
+
+The important invariant is not merely that the gateway can route to another provider. It is that **no model call or tool call bypasses the broker**. Without that invariant, a system can have an impressive policy layer on paper while a hidden direct call still escapes its data, authorization, or audit boundary.
 
 Something has to translate between the application's semantic world and the provider's API world. If every application implements that translation independently, routing rules, provider credentials, quotas, retries, redaction, and cost accounting spread across the codebase.
 
