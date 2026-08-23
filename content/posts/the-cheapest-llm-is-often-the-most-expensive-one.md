@@ -96,11 +96,6 @@ The user sees one sentence. A production system may need to authenticate the use
 
 The question is one line. The execution is not.
 
-<figure class="article-figure article-figure-plain">
-  <img src="/images/illustrations/gateway-tool-broker-architecture.png" width="1580" height="689" alt="Architecture showing autonomy policy, identity and attested intent, data labels and memory rules, and context trust segregation flowing through a gateway and tool broker into policy-based action, telemetry, human review, or a blocked and logged result.">
-  <figcaption>The gateway and tool broker form a complete mediation boundary: no model call or tool call bypasses the broker.</figcaption>
-</figure>
-
 The architecture makes the missing control point explicit. Autonomy policy, identity, data labels, memory rules, and context trust are inputs to mediation. The broker then turns them into one of three outcomes: an allowed action with telemetry, a human review or override, or a blocked, rolled-back, and logged attempt.
 
 The important invariant is not merely that the gateway can route to another provider. It is that **no model call or tool call bypasses the broker**. Without that invariant, a system can have an impressive policy layer on paper while a hidden direct call still escapes its data, authorization, or audit boundary.
