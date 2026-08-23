@@ -50,6 +50,14 @@ An observed cohort metric is simpler:
 
 The expected formulation helps compare a new policy before it has processed much traffic. The cohort formulation is what finance and operations can reconcile after deployment. They answer different questions and should not be casually mixed.
 
+**A worked cohort calculation.** Imagine 100,000 requests from the same workload. An always-cheap policy spends $100 on its first calls, but 18,000 requests need an additional $0.024 of repair, retry, or tool work and 5,000 reach a reviewer at an average marginal cost of $0.050. Its illustrative total is therefore $782 for 82,000 accepted outcomes, or about $0.0095 per accepted outcome.
+
+An always-strong policy might spend $1,500 on its first calls, accept 96,000 outcomes, and land at about $0.0156 per accepted outcome. A deterministic router might spend $70 on cheap first calls, $375 on stronger routes, $100 on routing and verification, and $200 on recovery, while accepting 94,000 outcomes. That is $745 in total, or about $0.0079 per accepted outcome.
+
+The router wins in this deliberately simplified example even though it uses more infrastructure than the always-cheap policy. The result depends on the workload mix, the quality threshold, the price schedule, and the cost assigned to review. Change any of those assumptions and the winner can change. That is precisely why a router should be measured against baselines rather than advertised with a universal savings percentage.
+
+The accounting boundary also matters. A model vendor may report token spend; the product owner may need to account for retrieval, API calls, gateway compute, reviewer time, and the cost of a second customer contact. If those costs live in separate systems, the route trace needs a shared request identifier so finance can reconcile them after the fact.
+
 This is why a more capable model can be cheaper in practice. It may cost more per call but reach the quality bar in one attempt. Conversely, a cheap model can be the expensive choice when it creates enough uncertainty downstream.
 
 OpenAI makes a similar outcome-based argument in its [guidance on enterprise AI investment](https://openai.com/index/managing-ai-investments-in-agentic-era/): the meaningful unit is not isolated token spend, but the cost of reaching a useful result, including completion, latency, tool use, retries, and human involvement. That is enterprise guidance from one vendor, not an independent industry law, but it gives the right accounting direction.
@@ -114,6 +122,22 @@ Uber's later work on [agent identity](https://www.uber.com/gb/en/blog/solving-th
 The application-facing contract can remain boring and OpenAI-compatible. That is valuable because it reduces integration friction. Compatibility at the edge does not mean provider behaviour is identical behind the edge. Adapters still need to translate authentication, streaming, tool semantics, error classes, context limits, and structured-output guarantees.
 
 A provider may support structured output without guaranteeing that every response is valid for every schema. Reliability depends on constrained decoding, API semantics, schema complexity, model version, validation, and repair behaviour. The gateway must validate the actual response.
+
+**The route contract.** A production gateway should be able to serialise the decision it made for one request. Not every internal feature needs to be exposed to the application, but the contract must be rich enough for an operator to answer five questions: who asked, what was allowed, which candidates were rejected, why this route won, and what happened when the route failed.
+
+| Contract field | What it records |
+| --- | --- |
+| Request context | Tenant class, actor class, task class, deadline, data zone, and whether the request can mutate state |
+| Policy decision | Policy version, model-subset version, allowed tools, budget reservation, and degraded-mode status |
+| Candidate reasoning | Eligible routes, rejected reasons, health snapshot, and the quality or capability floor |
+| Execution ledger | Provider, deployment, model version, attempts, stream state, tool calls, and request correlation ID |
+| Outcome ledger | Validation, groundedness, policy result, accepted or rejected status, reviewer action, and final state |
+
+This is not a request to expose hidden chain-of-thought. A useful trace can record decision features, policy outcomes, tool arguments after redaction, and route transitions without storing private reasoning traces. The goal is operational explainability: enough evidence to reproduce the decision and diagnose a failure.
+
+The contract should be versioned like an API. Adding a new model should not silently change the meaning of an old trace. A model alias should resolve to an immutable version in the ledger. A policy rollout should carry a configuration digest. When a new routing policy looks better in a dashboard, an engineer should be able to compare it with the exact previous policy rather than with whatever happens to be deployed today.
+
+The same record also creates a natural boundary between debugging and compliance. A redacted, short-retention trace can help an on-call engineer understand latency. A tamper-resistant audit record can prove which identity and policy authorised a mutation. They may share a correlation ID without sharing the same payload, retention period, or access permissions.
 
 ### Model calls and tool calls have different blast radii
 
@@ -208,6 +232,19 @@ The gateway should not promise atomicity that only the business service can prov
 
 The strongest failure policy is often a graceful stop: preserve the state, explain what is known, and expose the next safe action. Availability is not the same as pretending that an incomplete operation succeeded.
 
+Failure injection should be part of the benchmark rather than a last-minute chaos exercise. The gateway needs to distinguish a provider that rejected a request from one that accepted it and then disappeared, because the recovery contract is different. It also needs to distinguish a model error from a policy-service error, and a tool timeout from an unknown transaction state.
+
+| Injected condition | Expected decision | What the trace must prove |
+| --- | --- | --- |
+| Provider throttling before acceptance | Choose another eligible route or shed load | No unbounded retry loop and no policy bypass |
+| Timeout before first token | Retry only within the deadline and shared budget | The second attempt had a different admissibility or health reason |
+| Connection loss after streaming begins | Mark the response incomplete | The gateway did not splice two answers together |
+| Malformed tool arguments | Reject or repair once, then escalate | The tool never received unauthorised arguments |
+| Mutation timeout after provider acceptance | Reconcile by idempotency key | No blind replay and no false success |
+| Stale or unavailable policy snapshot | Use only the approved degraded path | The policy version and freshness were recorded |
+
+The canary should measure more than error rate. A new policy may reduce provider errors while increasing false-cheap decisions, or lower token spend while increasing human review. Compare the route distribution, accepted outcomes, p95 latency, fallback cost, policy violations, and reviewer rework against the previous policy. Roll back on a hard safety regression immediately; do not wait for a weighted score to average it away.
+
 ## Evaluation Gives the Router a Memory
 
 ### Accepted outcomes, not fluent answers
@@ -244,6 +281,16 @@ The trace must be privacy-aware. Debugging payloads should be redacted and acces
 The evaluation loop should move through increasing levels of exposure. Begin with offline benchmark runs against an always-cheap baseline, an always-strong baseline, and a deterministic router. Add a learned router only after it beats the deterministic baseline on accepted outcomes, cost, latency, and safety slices. Then run read-only shadow evaluation. Next, canary a new policy on a bounded slice. Finally, promote it only when rollback thresholds are explicit.
 
 Anthropic's [guidance on agent evaluations](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) emphasises capability and regression evals, transcript-level checks, and multiple grader types. Microsoft's model-router evaluation guidance similarly recommends representative prompts, pairwise comparisons, and latency and cost measurements across repeated runs. These sources support a method, not a universal benchmark threshold.
+
+The details matter. Microsoft's [model-router evaluation protocol](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/model-router) recommends using at least 100 prompts from the actual workload, swapping the order of pairwise responses to reduce position bias, scoring accuracy and completeness independently, and comparing p50, p90, and p95 latency rather than relying on an average. It also asks teams to include router markup and the underlying model price in the cost calculation. Those recommendations are specific to Microsoft's toolkit, but they are a good minimum discipline for any router benchmark.
+
+Anthropic's work adds a different warning: the final sentence of an agent transcript is not necessarily the outcome. A flight-booking agent can say that a booking succeeded while the environment contains no reservation. Their evaluation model separates a task, multiple trials, graders, the full transcript, and the final environment state. That separation is essential for a gateway with tools. The response text can be fluent while the database state, authorization path, or tool argument is wrong.
+
+The [tau-bench research benchmark](https://arxiv.org/abs/2406.12045) makes this concrete by evaluating tool-agent-user interaction against an annotated database goal state and by introducing pass-to-the-k reliability across repeated trials. Its reported results found that even strong function-calling agents succeeded on fewer than half of the tasks in some settings, with reliability falling sharply across repeated attempts. The number is a benchmark result from retail and airline-style environments, not a prediction for every production system. The lesson is more durable: one successful transcript is weak evidence for a state-changing workflow.
+
+For the gateway project, I would turn this into a release protocol. Split the task set by intent, consequence, context length, and provider condition. Keep a private test slice so the router is not tuned against every example it will later be judged on. Run several trials per task because stochastic output makes one pass/fail result noisy. Use deterministic graders for schema, policy, tool parameters, state transitions, latency, and cost. Use model graders only for dimensions that genuinely require semantic judgement, and calibrate them against a reviewed sample. Read failed transcripts before changing the router; otherwise a bad grader can teach the system to optimise the wrong behaviour.
+
+The release gate should be conjunctive rather than a single weighted score. A policy violation, unauthorised mutation, or incorrect final state is a hard failure. Among policies that clear those gates, compare accepted-outcome rate, cost per accepted outcome, p95 latency, fallback rate, and route-distribution drift. This preserves the central asymmetry: quality and cost are trade-offs only after safety and contract compliance have passed.
 
 Real financial-services deployments reinforce the need for domain-owned evaluation. OpenAI's [Morgan Stanley case study](https://openai.com/index/morgan-stanley/) describes pre-deployment evaluation and ongoing testing for a high-stakes financial workflow. OpenAI's [Balyasny case study](https://openai.com/index/balyasny-asset-management/) describes task-level model selection using internal benchmarks and proprietary data. Both are customer stories from one vendor, not independent proof, but they show why a platform needs empirical task-level evidence rather than a single global model ranking.
 
@@ -291,6 +338,12 @@ The control plane needs only a few versioned records: a model and deployment reg
 
 The first release should use mock or OpenAI-compatible providers with controlled failure injection. Inject latency, throttling, malformed structured output, context overflow, provider errors, and connection loss after streaming begins. A router that only works when every provider is healthy has demonstrated a happy-path proxy, not a routing system.
 
+The budget should be enforced before execution, not reconstructed after the invoice arrives. At admission time, the gateway can reserve a maximum path budget based on the request class: the initial call, one allowed retry, expected tool work, and any review path. It can release the unused reservation when the request finishes and charge the actual ledger to the product and tenant. A state-changing request may have a higher ceiling but a stricter approval path; a low-risk informational request may be rejected or degraded when the remaining budget cannot meet its deadline.
+
+The [AWS multi-provider gateway reference architecture](https://aws.amazon.com/blogs/machine-learning/streamline-ai-operations-with-the-multi-provider-generative-ai-gateway-reference-architecture/) treats cost tracking, budget controls, rate limiting, access management, failover, and observability as one operating surface. That combination is more useful than a token dashboard alone. The ledger should attribute input tokens, output tokens, cached context, router and verifier calls, retrieval and tool charges, gateway compute, provider fallback, and human review to the same request, product, and tenant dimensions.
+
+Price changes and route-distribution changes should be observable events. If a provider changes its price, the registry needs a new effective-dated price version. If a policy suddenly sends twice as many requests to a reasoning model, the alert should show whether traffic changed, the classifier drifted, a cheaper route degraded, or a provider became unavailable. Otherwise FinOps becomes a monthly report rather than a control loop.
+
 The benchmark should compare three baselines before any learned policy:
 
 | Baseline | What it reveals |
@@ -323,4 +376,4 @@ The real optimisation target is not the model. It is the path to a correct, time
 
 The production evidence in this essay comes from reported case studies and product documentation: [Vercel's AI Gateway Production Index](https://vercel.com/blog/ai-gateway-production-index-july-2026), [Uber's GenAI Gateway](https://www.uber.com/co/en/blog/genai-gateway/), [Uber's agent identity work](https://www.uber.com/gb/en/blog/solving-the-agent-identity-crisis/), [Google Cloud's GKE Inference Gateway case study](https://cloud.google.com/blog/products/containers-kubernetes/how-gke-inference-gateway-improved-latency-for-vertex-ai), [Microsoft's model router guidance](https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-router-how-it-works), [AWS's resilience demonstration](https://aws.amazon.com/blogs/machine-learning/implementing-resilience-patterns-with-amazon-bedrock-and-llm-gateway/), and [AWS's multi-provider gateway reference architecture](https://aws.amazon.com/blogs/machine-learning/streamline-ai-operations-with-the-multi-provider-generative-ai-gateway-reference-architecture/). Their figures are reported by the cited organisations and should be read within each source's workload and measurement window.
 
-The research and evaluation discussion draws on [RouteLLM](https://arxiv.org/abs/2406.18665), [FrugalGPT](https://arxiv.org/abs/2305.05176), [Anthropic's agent-building guidance](https://www.anthropic.com/engineering/building-effective-agents), and [Anthropic's evaluation guidance](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents). The architecture, formulas, failure policy, and project boundary are my synthesis for a production LLM Gateway, not a claim that any one company implements every step exactly this way.
+The research and evaluation discussion draws on [RouteLLM](https://arxiv.org/abs/2406.18665), [FrugalGPT](https://arxiv.org/abs/2305.05176), [Anthropic's agent-building guidance](https://www.anthropic.com/engineering/building-effective-agents), [Anthropic's evaluation guidance](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents), [Microsoft's model-router evaluation protocol](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/model-router), and [tau-bench](https://arxiv.org/abs/2406.12045). The architecture, formulas, failure policy, and project boundary are my synthesis for a production LLM Gateway, not a claim that any one company implements every step exactly this way.
