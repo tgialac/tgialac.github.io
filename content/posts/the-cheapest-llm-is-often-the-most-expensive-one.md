@@ -48,6 +48,11 @@ An observed cohort metric is simpler:
 
 > Cost per accepted outcome = total dollars spent by the policy divided by the number of accepted outcomes.
 
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/llm-gateway-value-chain.png" width="1580" height="773" loading="lazy" decoding="async" alt="A value chain from problem to input, solution, output, outcome, and value, with economy, efficiency, effectiveness, cost-efficiency, and cost-effectiveness marked at different stages.">
+  <figcaption>The gateway is useful only when it connects spending on inputs to the effectiveness and value of the final outcome. This is an illustrative value-chain sketch, not a benchmark result.</figcaption>
+</figure>
+
 The expected formulation helps compare a new policy before it has processed much traffic. The cohort formulation is what finance and operations can reconcile after deployment. They answer different questions and should not be casually mixed.
 
 **A worked cohort calculation.** Imagine 100,000 requests from the same workload. An always-cheap policy spends $100 on its first calls, but 18,000 requests need an additional $0.024 of repair, retry, or tool work and 5,000 reach a reviewer at an average marginal cost of $0.050. Its illustrative total is therefore $782 for 82,000 accepted outcomes, or about $0.0095 per accepted outcome.
@@ -114,6 +119,11 @@ That distinction matters when the control plane is unavailable. A data-plane gat
 The data plane for one request should be understandable: authenticate the caller, establish identity and data labels, validate the request, filter candidates, score the admissible routes, enforce deadline and budget, call a provider adapter, apply bounded recovery, validate the result, and emit a trace.
 
 The asynchronous control plane should do different work: evaluate candidate models, analyse sampled outcomes, update prices and health, promote or roll back policy versions, and compare route performance. Offline evaluation is not a normal synchronous stage in every request path. It is a control-plane activity that changes what the data plane is allowed to do later.
+
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/ai-gateway-control-boundary.png" width="1359" height="626" loading="lazy" decoding="async" alt="Applications and a user enter an AI Gateway whose safety, scalability, governance, FinOps, and observability capabilities connect to multiple model providers.">
+  <figcaption>A gateway is a shared boundary for safety, scalability, governance, FinOps, and observability. The provider logos are illustrative; the architectural boundary is the point.</figcaption>
+</figure>
 
 Uber's [GenAI Gateway](https://www.uber.com/co/en/blog/genai-gateway/) is a useful real-world example of this platform boundary. Uber reports that its gateway unified access across OpenAI, Vertex AI, and internally hosted models, while centralising authentication, authorisation, PII redaction, metrics, audit logs, cost attribution, and security review. The published snapshot describes a platform used by many teams and millions of queries per month; those are Uber-reported figures, not a universal reference architecture.
 
@@ -182,6 +192,11 @@ The invariant is simple:
 
 That is stronger than having a policy document. It is a structural property that can be tested.
 
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/gateway-broker-mediation.png" width="1580" height="689" loading="lazy" decoding="async" alt="Autonomy policy, identity and attested intent, data labels and memory rules, and context trust converge on a broker that mediates whether an action is allowed, reviewed, or blocked.">
+  <figcaption>The broker is the invariant: autonomy, identity, data labels, and context trust must converge before either a model call or a tool call is allowed to proceed.</figcaption>
+</figure>
+
 ## Filter First, Then Optimise
 
 ### Hard constraints before soft preferences
@@ -225,6 +240,11 @@ Google's [GKE Inference Gateway case study](https://cloud.google.com/blog/produc
 
 A production router therefore needs a confidence story. When the route decision is uncertain, the system can ask for clarification, choose a safer model, restrict tools, or escalate. It should not hide uncertainty inside a weighted score that no operator can explain.
 
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/query-router-cost-quality-frontier.png" width="2048" height="874" loading="lazy" decoding="async" alt="A query router chooses among several language models, with an ideal router shown near the cost-quality frontier.">
+  <figcaption>An illustrative cost–quality frontier: the router’s job is to approach the best admissible trade-off, not to pretend that one model dominates every workload. The model labels are illustrative, not current benchmark data.</figcaption>
+</figure>
+
 ## Failure Is Part of the Route
 
 ### Retry budgets and admission control
@@ -240,6 +260,11 @@ Retries are useful only when the next attempt has a reasonable chance of changin
 | Context overflow | Compress, retrieve less, or select a larger-context route | Repeat the same request unchanged |
 | Tool timeout with unknown commit state | Reconcile by idempotency key before deciding | Blindly replay a mutation |
 | Connection loss after streaming begins | Mark the response incomplete and surface a clear state | Transparently splice a second answer into the first |
+
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/idempotency-retry-trap.png" width="1076" height="850" loading="lazy" decoding="async" alt="A retry after a payment timeout creates a double charge, while an idempotency key lets the server return the saved result and keep a single charge.">
+  <figcaption>A timeout does not tell the client whether a mutation happened. An idempotency key turns a blind replay into a reconciliation check.</figcaption>
+</figure>
 
 The retry budget should be shared across the application, SDK, gateway, provider adapter, and agent loop. Otherwise five layers can each believe they are making one reasonable retry while the user experiences thirty attempts.
 
@@ -389,6 +414,27 @@ The strongest demo is not a chart where the cheapest model handles the most traf
 
 That is what turns an architecture into evidence.
 
+## Case Study: Red Hat's Semantic Router
+
+The most useful case study for this design is not a claim that a router saves a universal percentage. It is a concrete example of where semantic routing meets the inference-serving layer.
+
+In [Red Hat's LLM Semantic Router article](https://developers.redhat.com/articles/2025/05/20/llm-semantic-router-intelligent-request-routing), the router sits behind Envoy as an External Processor. A client sends an OpenAI-compatible request to Envoy. The semantic processor extracts the prompt, generates an embedding with a configured BERT model, compares it with task vectors, and selects the model associated with the detected task. Red Hat describes several use cases: sending mathematics to a specialised model, routing simpler requests to cheaper models, serving semantically similar requests from a cache, and detecting PII so a request can be redirected, redacted, or rejected before it reaches a public model.
+
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/red-hat-envoy-semantic-router-flow.png" width="1413" height="741" loading="lazy" decoding="async" alt="A client sends an OpenAI-compatible request through an Envoy proxy to a semantic LLM router, which analyzes the request and routes a modified request to an LLM backend.">
+  <figcaption>A simplified Envoy–semantic-router flow based on Red Hat's engineering case study. The diagram is an explanatory visual supplied for this article, not Red Hat's official figure.</figcaption>
+</figure>
+
+The implementation detail is important. Red Hat describes a hybrid Rust and Go design: Rust's Candle library handles BERT embedding generation, similarity matching, and classification; Go bindings expose that work to a Go-based ExtProc server; Envoy handles interception and request/response modification. This is a different trade-off from putting a large classifier or another LLM directly in the request path. The router tries to keep semantic classification fast enough to sit in front of the actual inference call while preserving a familiar client contract.
+
+The case study also makes the cache path explicit. If a new request is semantically similar to a prior request, the router may return a cached response and avoid backend inference. That can be powerful for repeated informational workloads, but it is not safe as a generic answer cache. A production cache key should include the policy version, tenant or authorization boundary, data zone, model and prompt versions, locale, tool state, and freshness requirement. Personalized answers, live account state, and mutations should bypass semantic response caching or use a domain-specific cache with explicit invalidation and authorization checks.
+
+Red Hat reports Prometheus metrics for request counts by model, routing decisions and modifications, cache hit rates, response latency, and token usage. Those metrics connect directly to the route ledger proposed earlier in this article. They also expose the real cost of semantic routing: embedding generation, similarity search, cache validation, and the risk of a false semantic match must be counted as part of the path. A router that saves model tokens but returns a stale or policy-incompatible answer has not reduced cost per accepted outcome.
+
+The most interesting part of the case study is its planned relationship with the Kubernetes Gateway API Inference Extension. Red Hat describes semantic understanding as a complement to the extension's queue and KV-cache awareness: semantic routing can choose the model or task pool, while the inference scheduler can choose the best endpoint inside that pool. This is the two-layer architecture in concrete form. Content semantics and serving state are different signals, and a production system should compose them rather than force one router to own both.
+
+The article does not present Red Hat's work as an anonymised production benchmark with a public latency or cost number. It is an engineering implementation and integration direction. That makes it more useful here: it gives the project a credible technical seam to reproduce and test. A strong implementation would compare a rule-only router, a semantic router, and a semantic-plus-serving-aware router under repeated prompts, cache hits and misses, PII cases, long contexts, provider degradation, and policy changes.
+
 The price of a token is easy to see. The cost of a decision is not. It appears in a retry nobody planned, a tool call that should have been blocked, a long context sent to the wrong deployment, a fallback that crosses a data boundary, a reviewer repairing a confident answer, and a user who asks the same question again because the first response sounded right but did not resolve the problem.
 
 The job of an LLM Gateway is to make those hidden paths visible and governable.
@@ -401,7 +447,7 @@ The real optimisation target is not the model. It is the path to a correct, time
 
 **Sources and scope**
 
-The production evidence in this essay comes from reported case studies and product documentation: [Vercel's AI Gateway Production Index](https://vercel.com/blog/ai-gateway-production-index-july-2026), [Uber's GenAI Gateway](https://www.uber.com/co/en/blog/genai-gateway/), [Uber's agent identity work](https://www.uber.com/gb/en/blog/solving-the-agent-identity-crisis/), [Google Cloud's GKE Inference Gateway case study](https://cloud.google.com/blog/products/containers-kubernetes/how-gke-inference-gateway-improved-latency-for-vertex-ai), [Microsoft's model router guidance](https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-router-how-it-works), [AWS's resilience demonstration](https://aws.amazon.com/blogs/machine-learning/implementing-resilience-patterns-with-amazon-bedrock-and-llm-gateway/), and [AWS's multi-provider gateway reference architecture](https://aws.amazon.com/blogs/machine-learning/streamline-ai-operations-with-the-multi-provider-generative-ai-gateway-reference-architecture/). Their figures are reported by the cited organisations and should be read within each source's workload and measurement window.
+The production evidence in this essay comes from reported case studies and product documentation: [Vercel's AI Gateway Production Index](https://vercel.com/blog/ai-gateway-production-index-july-2026), [Uber's GenAI Gateway](https://www.uber.com/co/en/blog/genai-gateway/), [Uber's agent identity work](https://www.uber.com/gb/en/blog/solving-the-agent-identity-crisis/), [Google Cloud's GKE Inference Gateway case study](https://cloud.google.com/blog/products/containers-kubernetes/how-gke-inference-gateway-improved-latency-for-vertex-ai), [Microsoft's model router guidance](https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/model-router-how-it-works), [AWS's resilience demonstration](https://aws.amazon.com/blogs/machine-learning/implementing-resilience-patterns-with-amazon-bedrock-and-llm-gateway/), [AWS's multi-provider gateway reference architecture](https://aws.amazon.com/blogs/machine-learning/streamline-ai-operations-with-the-multi-provider-generative-ai-gateway-reference-architecture/), and [Red Hat's LLM Semantic Router case study](https://developers.redhat.com/articles/2025/05/20/llm-semantic-router-intelligent-request-routing). Their figures are reported by the cited organisations and should be read within each source's workload and measurement window. Red Hat's architecture is cited here as an engineering reference; no public production KPI is inferred from it.
 
 The research and evaluation discussion draws on [RouteLLM](https://arxiv.org/abs/2406.18665), [FrugalGPT](https://arxiv.org/abs/2305.05176), [Anthropic's agent-building guidance](https://www.anthropic.com/engineering/building-effective-agents), [Anthropic's evaluation guidance](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents), [Microsoft's model-router evaluation protocol](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/model-router), and [tau-bench](https://arxiv.org/abs/2406.12045). The architecture, formulas, failure policy, and project boundary are my synthesis for a production LLM Gateway, not a claim that any one company implements every step exactly this way.
 
