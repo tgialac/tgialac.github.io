@@ -56,7 +56,6 @@ params:
   ShowReadingTime: true
   ShowShareButtons: true
   ShareButtons:
-    - x
     - linkedin
     - whatsapp
   ShowPostNavLinks: true
@@ -74,14 +73,10 @@ params:
       and the ideas worth keeping.
 
   socialIcons:
-    - name: x
-      url: "https://x.com/YOUR-X-HANDLE"
     - name: linkedin
-      url: "https://www.linkedin.com/in/YOUR-LINKEDIN"
+      url: "https://www.linkedin.com/in/tran-gia-lac-8aa054268/"
     - name: whatsapp
-      url: "https://wa.me/YOUR-PHONE-NUMBER"
-    - name: googlescholar
-      url: "https://scholar.google.com/citations?user=YOUR-SCHOLAR-ID"
+      url: "https://wa.me/84837945855"
     - name: github
       url: "https://github.com/tgialac"
     - name: email
