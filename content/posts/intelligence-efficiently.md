@@ -226,6 +226,11 @@ The harness also determines when to stop. An agent that continues researching af
 
 The most important word in the entire discussion is **compounding**.
 
+<figure class="article-figure article-figure-plain">
+  <img src="/images/illustrations/model-inference-harness-compounding.png" width="1672" height="941" loading="lazy" decoding="async" alt="A conceptual diagram showing model intelligence, inference infrastructure, and the agentic harness combining to lower cost and latency per accepted outcome.">
+  <figcaption>Efficiency gains across the model, inference infrastructure, and agentic harness reinforce one another. This is a conceptual systems diagram, not a measured benchmark.</figcaption>
+</figure>
+
 Suppose an agent begins with an illustrative cost index of 100. Four independent changes reduce the remaining cost:
 
 | Improvement | Illustrative reduction |
