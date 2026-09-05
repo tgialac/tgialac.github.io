@@ -8,10 +8,7 @@ tags: ["AI Infrastructure", "Inference", "AI Agents", "Efficiency"]
 draft: false
 ---
 
-<figure class="article-figure article-figure-hero">
-  <img src="/images/covers/intelligence-efficiently.png" width="1672" height="941" loading="eager" fetchpriority="high" decoding="async" alt="An organised modern restaurant kitchen where a head chef, kitchen staff, and manager coordinate work across specialised stations.">
-  <figcaption>Frontier AI is a systems problem. The chef, the kitchen, and the manager become efficient only when they are designed to work together.</figcaption>
-</figure>
+{{< responsive-image src="images/covers/intelligence-efficiently.png" class="article-figure article-figure-hero" loading="eager" fetchpriority="high" alt="An organised modern restaurant kitchen where a head chef, kitchen staff, and manager coordinate work across specialised stations." >}}
 
 You can think of an AI system as a restaurant.
 
@@ -56,11 +53,11 @@ That probability creates a quality floor. Below the floor, lower cost is false e
 
 This is the same production accounting problem explored in [The Cheapest LLM Is Often the Most Expensive One](/posts/the-cheapest-llm-is-often-the-most-expensive-one/): the price of the first call and the cost of reaching a useful result are different quantities.
 
-The same principle explains why GPT-5.6 is a family rather than one model for every request.
+GPT-5.6 provides a concrete example of this principle. It is a family rather than one model for every request.
 
 | Model | Role in the family | A practical fit |
 | --- | --- | --- |
-| [GPT-5.6 Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol) | Flagship capability for complex professional work | Difficult coding, reasoning, research, and long agent tasks |
+| [GPT-5.6 Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol) | Flagship of the GPT-5.6 family | Difficult coding, reasoning, research, and long agent tasks |
 | [GPT-5.6 Terra](https://developers.openai.com/api/docs/models/gpt-5.6-terra) | Balance between intelligence and cost | Everyday production work where quality and budget both matter |
 | [GPT-5.6 Luna](https://developers.openai.com/api/docs/models/gpt-5.6-luna) | Efficiency for high volume workloads | Narrower, frequent, or latency sensitive tasks |
 
@@ -86,9 +83,9 @@ First, requests are uneven. A short question with a long answer behaves differen
 
 These constraints are why inference optimisation is not one trick. It is a collection of decisions about routing, scheduling, memory, kernels, and prediction.
 
-It helps to divide a request into two broad phases. **Prefill** processes the input prompt and constructs the initial attention state. **Decode** generates the response token by token. A long document with a one sentence answer is dominated by prefill. A tiny prompt that asks for a long story is dominated by decode.
+It helps to divide a request into two broad phases. **Prefill** processes the input prompt and constructs the initial attention state. **Decode** generates the response token by token. A long document with a single sentence answer is dominated by prefill. A tiny prompt that asks for a long story is dominated by decode.
 
-This distinction explains why two users can describe the same system in opposite ways. One experiences a long pause followed by a fast answer. Another sees the first word immediately but waits while the answer unfolds. The first is sensitive to **time to first token**. The second is sensitive to **inter token latency** and total generation time.
+This distinction explains why two users can describe the same system in opposite ways. One experiences a long pause followed by a fast answer. Another sees the first word immediately but waits while the answer unfolds. The first is sensitive to **time to first token**. The second is sensitive to **latency between output tokens** and total generation time.
 
 Throughput adds another perspective. A service may generate more total tokens per second across its fleet while an individual user waits longer in a queue. High utilisation is economically attractive, but pushing utilisation too far can make latency unstable. Efficient serving is therefore a balancing act between hardware utilisation, per request responsiveness, and predictable tail latency.
 
@@ -116,7 +113,7 @@ Modern accelerators can perform enormous amounts of arithmetic, but computation 
 
 Some work can also be shifted out of the critical path. If part of a calculation depends only on model weights or stable configuration, it may be prepared before a user request arrives. The amount of mathematics does not necessarily change, but the amount performed while the user is waiting does.
 
-In the engineering account behind this article, OpenAI reports using GPT-5.6 Sol and Codex to inspect production traffic, identify imbalances, propose routing strategies, find computation that could be prepared in advance, and help write production kernels. OpenAI reports that this work, combined with other kernel improvements, reduced its total serving cost by about 20 percent.
+In a July 2026 engineering account that inspired this essay, OpenAI reports using GPT-5.6 Sol and Codex to inspect production traffic, identify imbalances, propose routing strategies, find computation that could be prepared in advance, and help write production kernels. OpenAI reports that this work, combined with other kernel improvements, reduced its total serving cost by about 20 percent.
 
 That figure should be read carefully. It is an internal result reported by OpenAI for its own serving stack. It is not a promise that every GPT-5.6 request, workload, or external application becomes exactly 20 percent cheaper.
 
@@ -139,11 +136,11 @@ Think of a teacher checking a familiar sequence. Instead of writing `1, 2, 3, 4,
 
 The benefit depends on how quickly the draft model runs and how often its proposals are accepted. A poor draft creates extra work. A good one reduces the expensive serial work performed by the primary model.
 
-The acceptance rate is only part of the equation. A draft model can be accurate but too slow to help. A very fast draft can be useless if most proposals are rejected. The length of each proposed block, the verification cost, and the shape of the workload all influence the result. There is no universally best speculator, just as there is no universally best kitchen station layout.
+The acceptance rate is only part of the equation. A draft model can be accurate but too slow to help. A very fast draft can be useless if most proposals are rejected. The length of each proposed block, the verification cost, and the shape of the workload all influence the result. There is no universally best draft model, just as there is no universally best kitchen station layout.
 
 This is an important pattern in systems optimisation: an elegant technique on paper can lose to overhead in production. The relevant question is not whether speculation exists, but whether it reduces end to end cost and latency under real traffic.
 
-OpenAI reports that GPT-5.6 Sol helped design and run hundreds of experiments on its speculator models, including changes to their size, architecture, and features. It also helped monitor training and investigate hardware failures or instability. According to OpenAI, the resulting changes improved token generation efficiency by more than 15 percent in its internal system.
+OpenAI also reports that GPT-5.6 Sol helped design and run hundreds of experiments on its draft models, including changes to their size, architecture, and features. It helped monitor training and investigate hardware failures or instability. According to OpenAI, the resulting changes improved token generation efficiency by more than 15 percent in its internal system.
 
 Again, this is a reported systems result, not a universal speed guarantee. Its broader importance is the method: the model being served can also help improve the mechanism that serves it.
 
@@ -151,7 +148,7 @@ Again, this is a reported systems result, not a universal speed guarantee. Its b
 
 Suppose a user provides twenty pages of text and asks for a summary. The model should not reprocess all twenty pages from the beginning every time it generates another word.
 
-Transformers retain intermediate attention information in a **key value cache**, usually called the KV cache. During the initial processing of uncached input, the system builds this state. While generating output, it repeatedly reads and extends the state.
+Transformers retain intermediate attention information in a **key value cache**, usually shortened to KV cache. During the initial processing of uncached input, the system builds this state. While generating output, it repeatedly reads and extends the state.
 
 The KV cache saves computation, but it consumes memory and grows with the sequence. That creates a scheduling problem. Consider two requests:
 
@@ -212,7 +209,7 @@ The sequence matters. If new information is inserted near the beginning, the sha
 
 This is why histories that grow by appending new information, along with deterministic tool ordering, can reduce cost. Stable information stays in place. Tools appear in a consistent order. The architecture gives the cache something reliable to recognise.
 
-The current [OpenAI prompt caching guide](https://developers.openai.com/api/docs/guides/prompt-caching) goes further by supporting explicit cache breakpoints for reusable content. It also notes an important tradeoff: compaction can shorten context while reducing cache reuse because it changes the prefix. A lower cache hit rate can still be worthwhile when the total number of input tokens falls enough.
+For GPT-5.6 and later models, the [OpenAI prompt caching guide](https://developers.openai.com/api/docs/guides/prompt-caching) documents explicit cache breakpoints for reusable content. It also notes an important tradeoff: compaction can shorten context while reducing cache reuse because it changes the prefix. A lower cache hit rate can still be worthwhile when the total number of input tokens falls enough.
 
 This is a good example of why one metric is not sufficient. Maximising cache hits is not the goal. Minimising total cost while preserving the outcome is the goal.
 
@@ -226,10 +223,7 @@ The harness also determines when to stop. An agent that continues researching af
 
 The most important word in the entire discussion is **compounding**.
 
-<figure class="article-figure article-figure-plain">
-  <img src="/images/illustrations/model-inference-harness-compounding.png" width="1672" height="941" loading="lazy" decoding="async" alt="A conceptual diagram showing model intelligence, inference infrastructure, and the agentic harness combining to lower cost and latency per accepted outcome.">
-  <figcaption>Efficiency gains across the model, inference infrastructure, and agentic harness reinforce one another. This is a conceptual systems diagram, not a measured benchmark.</figcaption>
-</figure>
+{{< responsive-image src="images/illustrations/model-inference-harness-compounding.png" class="article-figure article-figure-plain" alt="A conceptual diagram showing model intelligence, inference infrastructure, and the agentic harness combining to lower cost and latency per accepted outcome." >}}
 
 Suppose an agent begins with an illustrative cost index of 100. Four independent changes reduce the remaining cost:
 
@@ -254,7 +248,7 @@ The fastest model call is useful. A model call the system never needed is better
 
 The most interesting part of the GPT-5.6 story is not one kernel or one cache policy. It is the feedback loop.
 
-OpenAI describes GPT-5.6 Sol and Codex participating in several parts of the optimisation process:
+In its engineering account, OpenAI describes GPT-5.6 Sol and Codex participating in several parts of the optimisation process:
 
 1. Analyse production traffic.
 2. Identify routing bottlenecks and workload imbalance.
