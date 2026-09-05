@@ -99,17 +99,23 @@ That last condition is difficult because the future is partly unknown. The syste
 
 Routing also interacts with **cache locality**. Moving a request to a less busy worker may discard a reusable prefix or KV cache already present elsewhere. Keeping it on the original worker saves computation but may deepen that worker's queue. The scheduler must compare the cost of waiting with the cost of rebuilding state.
 
+{{< responsive-image src="images/illustrations/chwbl-load-balancing.png" class="article-figure article-figure-plain article-figure-responsive article-figure-light-canvas article-figure-compact" sizes="(max-width: 700px) calc(100vw - 48px), 608px" link="true" alt="A consistent hash ring with bounded loads routing a request past an overloaded replica to another replica that remains within its load threshold." caption="At scale, cache aware routing balances locality against hotspots. [KubeAI](https://www.kubeai.org/concepts/load-balancing/) uses CHWBL for its Prefix Hash strategy, while [Envoy](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/load_balancing_policies/common/v3/common.proto.html) exposes a bounded load factor for Ring Hash and Maglev." >}}
+
 Average performance can conceal the worst failures. A routing policy might improve the median while allowing a small group of long requests to block everything behind them. Production systems therefore care about percentiles such as P95 and P99, not only the average. Users remember the request that stalled for a minute more vividly than the nine that completed in two seconds.
 
 ### Kernels determine how well the hardware is used
 
 The model describes the computation. A **kernel** is code close to the hardware that carries out part of that computation on an accelerator.
 
+{{< responsive-image src="images/illustrations/cuda-grid-block-thread-indexing.png" class="article-figure article-figure-plain article-figure-responsive article-figure-light-canvas" link="true" alt="A CUDA indexing diagram mapping a block within a multidimensional grid to an individual thread within that block." >}}
+
 Two kernels can produce the same mathematical result and have very different performance. One may move data unnecessarily between memory levels. Another may keep useful values close to the compute units. One may launch many small operations that leave the hardware waiting. Another may combine work and keep more of the device occupied.
 
 This is why optimising AI systems is not only about reducing the number of calculations. Data movement, memory layout, parallel execution, and idle time can matter just as much.
 
 Modern accelerators can perform enormous amounts of arithmetic, but computation is useful only when the required data arrives in time. A theoretically smaller operation may still be slower if it repeatedly moves values through expensive memory paths. Kernel engineering tries to keep data close to where it is consumed, combine compatible operations, and avoid synchronisation that leaves thousands of compute units waiting.
+
+{{< responsive-image src="images/illustrations/cuda-memory-hierarchy.png" class="article-figure article-figure-plain article-figure-responsive article-figure-light-canvas article-figure-narrow" sizes="(max-width: 700px) calc(100vw - 48px), 896px" link="true" alt="A CUDA memory hierarchy showing register memory for a thread, shared memory for thread blocks, distributed shared memory across block clusters, and global VRAM for the kernel grid." >}}
 
 Some work can also be shifted out of the critical path. If part of a calculation depends only on model weights or stable configuration, it may be prepared before a user request arrives. The amount of mathematics does not necessarily change, but the amount performed while the user is waiting does.
 

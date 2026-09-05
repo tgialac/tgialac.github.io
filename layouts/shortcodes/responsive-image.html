@@ -2,9 +2,15 @@
 {{- if not $source -}}
   {{- errorf "responsive-image: asset not found: %s" (.Get "src") -}}
 {{- end -}}
-{{- $small := $source.Resize "720x webp q82" -}}
-{{- $medium := $source.Resize "1200x webp q82" -}}
 {{- $large := $source.Fit "1672x1672 webp q84" -}}
+{{- $small := $large -}}
+{{- if gt $large.Width 720 -}}
+  {{- $small = $large.Resize "720x webp q82" -}}
+{{- end -}}
+{{- $medium := $large -}}
+{{- if gt $large.Width 1200 -}}
+  {{- $medium = $large.Resize "1200x webp q82" -}}
+{{- end -}}
 {{- $sizes := .Get "sizes" | default "(max-width: 700px) calc(100vw - 48px), 1217px" -}}
 {{- $linked := eq (.Get "link") "true" -}}
 <figure class="{{ .Get "class" }}">
@@ -12,10 +18,13 @@
   <a class="article-image-link" href="{{ $large.RelPermalink }}" target="_blank" rel="noopener" aria-label="Open this diagram at full size">
   {{- end }}
   <picture>
-    <source type="image/webp" srcset="{{ $small.RelPermalink }} 720w, {{ $medium.RelPermalink }} 1200w, {{ $large.RelPermalink }} {{ $large.Width }}w" sizes="{{ $sizes }}">
+    <source type="image/webp" srcset="{{ $small.RelPermalink }} {{ $small.Width }}w{{ if gt $medium.Width $small.Width }}, {{ $medium.RelPermalink }} {{ $medium.Width }}w{{ end }}{{ if gt $large.Width $medium.Width }}, {{ $large.RelPermalink }} {{ $large.Width }}w{{ end }}" sizes="{{ $sizes }}">
     <img src="{{ $large.RelPermalink }}" width="{{ $large.Width }}" height="{{ $large.Height }}" style="aspect-ratio: {{ $large.Width }} / {{ $large.Height }}; height: auto;" loading="{{ .Get "loading" | default "lazy" }}"{{ with .Get "fetchpriority" }} fetchpriority="{{ . }}"{{ end }} decoding="async" alt="{{ .Get "alt" }}">
   </picture>
   {{- if $linked }}
   </a>
+  {{- end }}
+  {{- with .Get "caption" }}
+  <figcaption>{{ . | markdownify }}</figcaption>
   {{- end }}
 </figure>
