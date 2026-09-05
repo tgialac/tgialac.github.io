@@ -45,6 +45,10 @@ Model B is more expensive per token, yet cheaper per completed task. It uses its
 
 This is why the useful unit of optimisation is not the first model call. It is the accepted outcome. A cheap call that produces an incomplete answer, triggers a retry, repeats a tool call, and eventually requires human repair may be the most expensive path through the system.
 
+This also changes how we should interpret the phrase **more work per token**. It does not mean compressing every answer until it becomes terse. A short answer that omits the decisive fact is not efficient. A long chain of reasoning that prevents three failed attempts may be. The useful question is whether each token increases the probability of reaching the required result.
+
+That probability creates a quality floor. Below the floor, lower cost is false economy. Above it, additional reasoning may have diminishing returns. The efficient operating point lies between those extremes: enough intelligence to solve the task reliably, without spending capability where it no longer changes the outcome.
+
 This is the same production accounting problem explored in [The Cheapest LLM Is Often the Most Expensive One](/posts/the-cheapest-llm-is-often-the-most-expensive-one/): the price of the first call and the cost of reaching a useful result are different quantities.
 
 The same principle explains why GPT-5.6 is a family rather than one model for every request.
@@ -56,6 +60,10 @@ The same principle explains why GPT-5.6 is a family rather than one model for ev
 | [GPT-5.6 Luna](https://developers.openai.com/api/docs/models/gpt-5.6-luna) | Efficiency for high volume workloads | Narrower, frequent, or latency sensitive tasks |
 
 The principle is not **always use the strongest model**. It is **use the right amount of intelligence for the task**. Sending every request to the most capable option is like renting a supercomputer to calculate `2 + 2`. Sending a genuinely difficult task to an inadequate model is the opposite mistake. It may look cheap until the retries begin.
+
+Model choice is only one control. Reasoning effort, tool access, context length, and stopping criteria also determine how much intelligence is allocated. A useful production system can route routine extraction to a fast model, send ambiguous analysis to a balanced model, and reserve the most capable model for cases where the evidence or consequences justify it. The route can change when a task becomes harder than it first appeared.
+
+This makes frontier efficiency a resource allocation problem. Intelligence is not a switch that is either on or off. It is a budget that can be directed toward the moments where it has the highest marginal value.
 
 ## The Model Is Only One Layer
 
@@ -73,11 +81,23 @@ First, requests are uneven. A short question with a long answer behaves differen
 
 These constraints are why inference optimisation is not one trick. It is a collection of decisions about routing, scheduling, memory, kernels, and prediction.
 
+It helps to divide a request into two broad phases. **Prefill** processes the input prompt and constructs the initial attention state. **Decode** generates the response token by token. A long document with a one sentence answer is dominated by prefill. A tiny prompt that asks for a long story is dominated by decode.
+
+This distinction explains why two users can describe the same system in opposite ways. One experiences a long pause followed by a fast answer. Another sees the first word immediately but waits while the answer unfolds. The first is sensitive to **time to first token**. The second is sensitive to **inter token latency** and total generation time.
+
+Throughput adds another perspective. A service may generate more total tokens per second across its fleet while an individual user waits longer in a queue. High utilisation is economically attractive, but pushing utilisation too far can make latency unstable. Efficient serving is therefore a balancing act between hardware utilisation, per request responsiveness, and predictable tail latency.
+
 ## Inside the Inference Kitchen
 
 Imagine one thousand requests arriving at a cluster of accelerators. If one device receives one hundred requests while another receives five and a third receives none, the fleet may have enough total capacity and still feel slow.
 
 **Load balancing** decides where each request should go. A useful routing decision may consider geography, available capacity, accelerator type, current load, prompt length, expected output length, and whether a reusable cache already exists on a particular worker. The best destination is not always the nearest machine or the emptiest machine. It is the machine that can complete this request efficiently without making the rest of the queue worse.
+
+That last condition is difficult because the future is partly unknown. The system sees the prompt length, but it may not know whether the answer will take twenty tokens or two thousand. It can estimate from the task, model, requested output limit, and historical traffic, then update scheduling decisions as work unfolds.
+
+Routing also interacts with **cache locality**. Moving a request to a less busy worker may discard a reusable prefix or KV cache already present elsewhere. Keeping it on the original worker saves computation but may deepen that worker's queue. The scheduler must compare the cost of waiting with the cost of rebuilding state.
+
+Average performance can conceal the worst failures. A routing policy might improve the median while allowing a small group of long requests to block everything behind them. Production systems therefore care about percentiles such as P95 and P99, not only the average. Users remember the request that stalled for a minute more vividly than the nine that completed in two seconds.
 
 ### Kernels determine how well the hardware is used
 
@@ -87,6 +107,10 @@ Two kernels can produce the same mathematical result and have very different per
 
 This is why optimising AI systems is not only about reducing the number of calculations. Data movement, memory layout, parallel execution, and idle time can matter just as much.
 
+Modern accelerators can perform enormous amounts of arithmetic, but computation is useful only when the required data arrives in time. A theoretically smaller operation may still be slower if it repeatedly moves values through expensive memory paths. Kernel engineering tries to keep data close to where it is consumed, combine compatible operations, and avoid synchronisation that leaves thousands of compute units waiting.
+
+Some work can also be shifted out of the critical path. If part of a calculation depends only on model weights or stable configuration, it may be prepared before a user request arrives. The amount of mathematics does not necessarily change, but the amount performed while the user is waiting does.
+
 In the engineering account behind this article, OpenAI reports using GPT-5.6 Sol and Codex to inspect production traffic, identify imbalances, propose routing strategies, find computation that could be prepared in advance, and help write production kernels. OpenAI reports that this work, combined with other kernel improvements, reduced its total serving cost by about 20 percent.
 
 That figure should be read carefully. It is an internal result reported by OpenAI for its own serving stack. It is not a promise that every GPT-5.6 request, workload, or external application becomes exactly 20 percent cheaper.
@@ -95,12 +119,12 @@ That figure should be read carefully. It is an internal result reported by OpenA
 
 Normal language generation is mostly sequential:
 
-```text
-token 1
-token 2
-token 3
-token 4
-```
+| Step | What is known |
+| --- | --- |
+| Generate token 1 | The prompt |
+| Generate token 2 | The prompt and token 1 |
+| Generate token 3 | The prompt and tokens 1 to 2 |
+| Generate token 4 | The prompt and tokens 1 to 3 |
 
 The model cannot fully generate token 4 before tokens 1 through 3 are known. That dependency limits how much of the process can run in parallel.
 
@@ -109,6 +133,10 @@ The model cannot fully generate token 4 before tokens 1 through 3 are known. Tha
 Think of a teacher checking a familiar sequence. Instead of writing `1, 2, 3, 4, 5, 6` one item at a time, the teacher lets a student draft the sequence and verifies it. When the student is usually right, verification can be faster than producing every item from scratch.
 
 The benefit depends on how quickly the draft model runs and how often its proposals are accepted. A poor draft creates extra work. A good one reduces the expensive serial work performed by the primary model.
+
+The acceptance rate is only part of the equation. A draft model can be accurate but too slow to help. A very fast draft can be useless if most proposals are rejected. The length of each proposed block, the verification cost, and the shape of the workload all influence the result. There is no universally best speculator, just as there is no universally best kitchen station layout.
+
+This is an important pattern in systems optimisation: an elegant technique on paper can lose to overhead in production. The relevant question is not whether speculation exists, but whether it reduces end to end cost and latency under real traffic.
 
 OpenAI reports that GPT-5.6 Sol helped design and run hundreds of experiments on its speculator models, including changes to their size, architecture, and features. It also helped monitor training and investigate hardware failures or instability. According to OpenAI, the resulting changes improved token generation efficiency by more than 15 percent in its internal system.
 
@@ -131,6 +159,10 @@ These requests stress the system differently. The first spends much of its time 
 
 A strong serving system adapts to workload shape. It does not use the same gear for city traffic, a mountain road, and a motorway.
 
+Long contexts make this problem sharper. Keeping more attention state available can prevent recomputation, but memory devoted to one request cannot serve another. The system may page state between memory tiers, split work across devices, or reduce the number of simultaneous requests. Each choice trades computation, communication, memory pressure, and queue time.
+
+This is why context windows should not be treated as free storage merely because a model supports them. Capacity is not the same as efficiency. A million token window can be extraordinarily useful when the task needs it. Filling that window with duplicated logs, stale tool results, or irrelevant documents simply turns available capacity into recurring cost.
+
 ## The Harness Decides How Much Work Exists
 
 The inference system makes a model call efficient. The agentic harness decides how many model calls exist in the first place.
@@ -149,6 +181,10 @@ More context means more tokens to process. It can also make the relevant evidenc
 
 The right distinction is not small context versus large context. It is **useful context versus unnecessary context**.
 
+Useful context changes the model's decision. Unnecessary context is present merely because the system knows how to retrieve it. That difference sounds obvious, but agents often accumulate information defensively. A full file is included when three lines would answer the question. A tool returns ten thousand rows when the next decision needs five. A plan remains in the history after the plan has already been executed.
+
+Good context engineering has three jobs. It must select the right evidence, preserve enough state for continuity, and discard or compress information whose original form no longer matters. The aim is not to make the prompt minimal at any cost. It is to maintain the smallest faithful representation of the work.
+
 One solution is deferred discovery. The model initially sees a compact description of what is available. Detailed definitions are loaded only when they become relevant. If the user asks for spreadsheet analysis, the agent does not need the complete schemas for every email, music, project management, and design integration.
 
 OpenAI's [tool search documentation](https://developers.openai.com/api/docs/guides/tools-tool-search) describes this pattern directly. Deferred tools can be discovered and loaded at runtime, which avoids placing every tool definition in the context at the beginning. Newly discovered tools are added at the end of the context so earlier content remains stable.
@@ -157,14 +193,13 @@ That last detail connects context management to caching.
 
 ### Reuse the prefix instead of computing it again
 
-Agent requests often share a large beginning:
+Agent requests often share the same broad structure:
 
-```text
-system instructions
-tool definitions
-conversation history
-new user or tool result
-```
+| Position | Typical content | Cache implication |
+| --- | --- | --- |
+| Beginning | System instructions and stable policies | Keep identical whenever possible |
+| Middle | Tool definitions and durable conversation state | Use deterministic ordering |
+| End | The newest user message or tool result | Append changing information here |
 
 **Prompt caching** allows the system to reuse work for a matching prefix instead of processing the same prefix again. The first request pays to construct the reusable state. Later requests can benefit when their opening tokens remain compatible with it.
 
@@ -175,6 +210,12 @@ This is why histories that grow by appending new information, along with determi
 The current [OpenAI prompt caching guide](https://developers.openai.com/api/docs/guides/prompt-caching) goes further by supporting explicit cache breakpoints for reusable content. It also notes an important tradeoff: compaction can shorten context while reducing cache reuse because it changes the prefix. A lower cache hit rate can still be worthwhile when the total number of input tokens falls enough.
 
 This is a good example of why one metric is not sufficient. Maximising cache hits is not the goal. Minimising total cost while preserving the outcome is the goal.
+
+Compaction deserves special attention in long agent runs. Instead of carrying every raw observation forever, the harness can replace older material with a concise state: what has been established, what changed, which decisions were made, and what remains unresolved. This reduces future input, but a careless summary can delete the clue needed several steps later.
+
+The right compaction policy is therefore task aware. Exact error messages may matter during debugging. The precise wording of a contract may matter during legal analysis. Repeated progress logs may not matter once their final status is known. Compression should preserve decision relevant information, not merely reduce token count.
+
+The harness also determines when to stop. An agent that continues researching after the evidence is sufficient wastes tokens even if every individual call is fast. One that stops too early saves tokens but fails the task. Clear acceptance criteria give the system a boundary: continue while a material requirement is unresolved, then stop when the requested outcome has been verified.
 
 ## Small Improvements Compound
 
@@ -189,11 +230,7 @@ Suppose an agent begins with an illustrative cost index of 100. Four independent
 | Better routing | 10 percent |
 | Fewer model calls | 20 percent |
 
-The reductions should not be added as if they remove 65 points from the original cost. Each acts on what remains:
-
-```text
-100 × 0.80 × 0.85 × 0.90 × 0.80 ≈ 49
-```
+The reductions should not be added as if they remove 65 points from the original cost. Each acts on what remains. In this example, **100 × 0.80 × 0.85 × 0.90 × 0.80 is approximately 49**.
 
 In this deliberately simplified example, no single optimisation cuts the cost in half, but their combination does.
 
@@ -218,27 +255,42 @@ OpenAI describes GPT-5.6 Sol and Codex participating in several parts of the opt
 7. Monitor training and investigate failures.
 8. Tune inference configurations for different workload shapes.
 
-The model is both the object being optimised and a tool used in the optimisation.
+The model is both the object being optimised and a tool used in the optimisation. That creates a reinforcing cycle:
 
-That creates a reinforcing loop:
-
-```text
-more capable AI
-        ↓
-faster engineering and experimentation
-        ↓
-better models, kernels, routing, and harnesses
-        ↓
-lower cost and latency
-        ↓
-more experiments become affordable
-        ↓
-more capable AI
-```
+| Stage | Effect on the next stage |
+| --- | --- |
+| More capable AI | Accelerates engineering and experimentation |
+| Faster experimentation | Produces better models, kernels, routing, and harnesses |
+| Better systems | Lower cost and latency |
+| Lower cost | Makes more experiments affordable |
+| More experiments | Create the conditions for more capable AI |
 
 This does not mean the loop runs automatically. Engineers still define goals, design measurements, review changes, and decide what enters production. A model can propose a faster kernel that is numerically wrong, a routing policy that improves average latency while damaging the tail, or a cache strategy that violates an isolation boundary. Greater automation raises the value of good evaluation rather than removing it.
 
 The strategic change is that AI can now accelerate parts of the work required to make AI itself more efficient. If that capability improves, the pace of systems optimisation may rise with model capability instead of depending only on human engineering time.
+
+## What Builders Should Optimise First
+
+The number of available techniques can make efficiency work feel like a hunt for exotic infrastructure. In practice, the best first step is usually to trace one representative task from the user's request to the accepted result.
+
+Write down every model call, every tool call, the input and output token counts, waiting time, retry, cache result, and human intervention. This simple trace reveals whether the real problem is an expensive model, an unnecessary loop, a giant tool response, a slow external API, or a result that repeatedly fails evaluation.
+
+A useful optimisation order is:
+
+1. **Define the accepted outcome.** Decide what success means before reducing anything. Otherwise the system can appear cheaper simply because it does less of the required work.
+2. **Remove unnecessary calls.** Deterministic transformations, validation, routing, and data lookup often belong in ordinary software. Do not ask a model to rediscover a value the application already knows.
+3. **Reduce irrelevant context.** Retrieve narrower evidence, cap tool output, remove duplication, and compact completed history while preserving facts needed later.
+4. **Parallelise independent work.** Two searches that do not depend on each other can run together. A dependent chain cannot. Parallelism shortens the critical path without pretending dependencies do not exist.
+5. **Stabilise reusable prefixes.** Keep instructions and tool definitions consistent, append changing state, and measure actual cache use.
+6. **Route by difficulty.** Use the least costly model and reasoning effort that reliably clears the quality bar. Escalate when uncertainty, task complexity, or consequence warrants it.
+7. **Tune the serving layer.** Once request structure is sound, optimise batching, memory, kernels, speculation, and routing for the workloads that actually dominate production.
+8. **Run the evaluation again.** An optimisation is real only if accepted outcomes remain stable or improve.
+
+The order matters. A ten percent faster model call cannot compensate for five model calls that should never have happened. Likewise, deleting context before defining what the task needs can create retries that erase the apparent saving.
+
+There is also a distinction between **latency work** and **cost work**. Parallel execution can reduce wall clock time while consuming roughly the same total resources. Batching can improve throughput and cost while making one request wait slightly longer. A product must decide which constraint matters for each path instead of treating efficiency as one number.
+
+Interactive coding, voice, and search experiences are sensitive to responsiveness. Offline document processing may tolerate more waiting in exchange for higher throughput. A safety review may rationally spend more compute because the cost of a missed issue is larger than the cost of inference. The efficient configuration is always relative to the job.
 
 ## How to Measure Frontier Efficiency
 
@@ -246,14 +298,19 @@ Efficiency claims are easy to misunderstand because the denominator can be chang
 
 Tokens per second measure generation speed. They do not tell us whether the answer is correct. Price per million tokens measures a tariff. It does not tell us how many tokens the task requires. Average latency can hide a painful tail. GPU utilisation can rise while users wait longer in a queue.
 
-A more complete measurement should include four dimensions:
+A more complete measurement should include several dimensions:
 
-| Dimension | Useful questions |
-| --- | --- |
-| Quality | Did the result meet the acceptance criteria? |
-| Cost | What did the complete path consume, including retries and tools? |
-| Latency | How long did the user wait, including queueing and every agent step? |
-| Reliability | How often did the system finish correctly before the deadline? |
+| Dimension | Example metric | Useful question |
+| --- | --- | --- |
+| Quality | Accepted outcome rate | Did the result meet the acceptance criteria? |
+| Cost | Cost per accepted outcome | What did the complete path consume, including retries and tools? |
+| Input efficiency | Input tokens per outcome | How much context was necessary? |
+| Output efficiency | Output tokens per outcome | Did generation contribute useful work? |
+| Orchestration | Model and tool calls per outcome | How much work did the harness create? |
+| Responsiveness | Time to first token | How quickly did visible progress begin? |
+| Completion latency | End to end P50, P95, and P99 | How long did the whole task take, including the tail? |
+| Reliability | Completion rate before deadline | Did the system finish predictably? |
+| Infrastructure | Throughput, utilisation, and cache reuse | Did hardware capacity become useful results? |
 
 The unit should be an **accepted outcome**. For a coding agent, that may mean the requested change is complete and the relevant tests pass. For research, it may mean the answer is supported by valid sources. For customer support, it may mean the issue is resolved without an incorrect action or unnecessary escalation.
 
@@ -262,6 +319,10 @@ That quality boundary needs evaluation at the outcome, trajectory, and operation
 This also clarifies how to interpret vendor numbers. OpenAI's reported serving cost and token generation improvements are useful evidence about the direction and scale of its internal engineering work. They are not independent benchmarks, and they do not predict every application. Real results depend on the selected model, reasoning effort, context length, output length, cache behaviour, tool calls, concurrency, and workload distribution.
 
 The only reliable way to know whether an optimisation works for a product is to test it against representative tasks and traffic that resembles production.
+
+This requires paired measurements. Compare systems on the same task distribution, under similar concurrency, with the same acceptance standard. Report both the centre and the tail. Separate cached from uncached traffic. Record failures and retries instead of excluding them as anomalies.
+
+Most importantly, resist metric substitution. If the business needs resolved support cases, tokens per second is a diagnostic metric, not the objective. If users need correct code changes, a lower price per call is useful only when the change still works. Infrastructure metrics explain the machine. Outcome metrics explain whether the machine is worth operating.
 
 ## Intelligence Is the Budget
 
