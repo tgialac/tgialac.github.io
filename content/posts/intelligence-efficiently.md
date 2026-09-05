@@ -1,14 +1,14 @@
 ---
 title: "Intelligence, Efficiently"
 date: 2026-09-05
-lastmod: 2026-09-05
+lastmod: 2026-09-06
 description: "How model capability, inference engineering, and agent design combine to make frontier AI faster, cheaper, and more useful."
 summary: "A systems view of frontier AI efficiency, from tokens and GPU kernels to prompt caching, tool discovery, and agent loops."
 tags: ["AI Infrastructure", "Inference", "AI Agents", "Efficiency"]
 draft: false
 ---
 
-{{< responsive-image src="images/covers/intelligence-efficiently.png" class="article-figure article-figure-hero" loading="eager" fetchpriority="high" alt="An organised modern restaurant kitchen where a head chef, kitchen staff, and manager coordinate work across specialised stations." >}}
+{{< responsive-image src="images/covers/intelligence-efficiently.png" class="article-figure article-figure-hero" loading="eager" fetchpriority="high" alt="An organised modern restaurant kitchen where a head chef, kitchen staff, and manager coordinate work across specialised stations." caption="Model, inference, and orchestration become efficient only when they work as one system." >}}
 
 You can think of an AI system as a restaurant.
 
@@ -99,7 +99,7 @@ That last condition is difficult because the future is partly unknown. The syste
 
 Routing also interacts with **cache locality**. Moving a request to a less busy worker may discard a reusable prefix or KV cache already present elsewhere. Keeping it on the original worker saves computation but may deepen that worker's queue. The scheduler must compare the cost of waiting with the cost of rebuilding state.
 
-{{< responsive-image src="images/illustrations/chwbl-load-balancing.png" class="article-figure article-figure-plain article-figure-responsive article-figure-light-canvas article-figure-compact" sizes="(max-width: 700px) calc(100vw - 48px), 608px" link="true" alt="A consistent hash ring with bounded loads routing a request past an overloaded replica to another replica that remains within its load threshold." caption="At scale, cache aware routing balances locality against hotspots. [KubeAI](https://www.kubeai.org/concepts/load-balancing/) uses CHWBL for its Prefix Hash strategy, while [Envoy](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/load_balancing_policies/common/v3/common.proto.html) exposes a bounded load factor for Ring Hash and Maglev." >}}
+{{< responsive-image src="images/illustrations/chwbl-load-balancing.png" class="article-figure article-figure-plain article-figure-responsive article-figure-light-canvas article-figure-compact" sizes="(max-width: 700px) calc(100vw - 48px), 608px" link="true" alt="A consistent hash ring with bounded loads routing a request past an overloaded replica to another replica that remains within its load threshold." caption="[KubeAI](https://www.kubeai.org/concepts/load-balancing/) uses CHWBL for prefix aware routing. [Envoy](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/load_balancing_policies/common/v3/common.proto.html) supports bounded load hashing for Ring Hash and Maglev." >}}
 
 Average performance can conceal the worst failures. A routing policy might improve the median while allowing a small group of long requests to block everything behind them. Production systems therefore care about percentiles such as P95 and P99, not only the average. Users remember the request that stalled for a minute more vividly than the nine that completed in two seconds.
 
@@ -107,7 +107,7 @@ Average performance can conceal the worst failures. A routing policy might impro
 
 The model describes the computation. A **kernel** is code close to the hardware that carries out part of that computation on an accelerator.
 
-{{< responsive-image src="images/illustrations/cuda-grid-block-thread-indexing.png" class="article-figure article-figure-plain article-figure-responsive article-figure-light-canvas" link="true" alt="A CUDA indexing diagram mapping a block within a multidimensional grid to an individual thread within that block." >}}
+{{< responsive-image src="images/illustrations/cuda-grid-block-thread-indexing.png" class="article-figure article-figure-plain article-figure-responsive article-figure-light-canvas" link="true" alt="A CUDA indexing diagram mapping a block within a multidimensional grid to an individual thread within that block." caption="CUDA kernels divide work from grids into blocks, then from blocks into individual threads." >}}
 
 Two kernels can produce the same mathematical result and have very different performance. One may move data unnecessarily between memory levels. Another may keep useful values close to the compute units. One may launch many small operations that leave the hardware waiting. Another may combine work and keep more of the device occupied.
 
@@ -115,11 +115,11 @@ This is why optimising AI systems is not only about reducing the number of calcu
 
 Modern accelerators can perform enormous amounts of arithmetic, but computation is useful only when the required data arrives in time. A theoretically smaller operation may still be slower if it repeatedly moves values through expensive memory paths. Kernel engineering tries to keep data close to where it is consumed, combine compatible operations, and avoid synchronisation that leaves thousands of compute units waiting.
 
-{{< responsive-image src="images/illustrations/cuda-memory-hierarchy.png" class="article-figure article-figure-plain article-figure-responsive article-figure-light-canvas article-figure-narrow" sizes="(max-width: 700px) calc(100vw - 48px), 896px" link="true" alt="A CUDA memory hierarchy showing register memory for a thread, shared memory for thread blocks, distributed shared memory across block clusters, and global VRAM for the kernel grid." >}}
+{{< responsive-image src="images/illustrations/cuda-memory-hierarchy.png" class="article-figure article-figure-plain article-figure-responsive article-figure-light-canvas article-figure-narrow" sizes="(max-width: 700px) calc(100vw - 48px), 896px" link="true" alt="A CUDA memory hierarchy showing register memory for a thread, shared memory for thread blocks, distributed shared memory across block clusters, and global VRAM for the kernel grid." caption="Fast kernels keep frequently used data as close to each thread as possible." >}}
 
 Some work can also be shifted out of the critical path. If part of a calculation depends only on model weights or stable configuration, it may be prepared before a user request arrives. The amount of mathematics does not necessarily change, but the amount performed while the user is waiting does.
 
-In a July 2026 engineering account that inspired this essay, OpenAI reports using GPT-5.6 Sol and Codex to inspect production traffic, identify imbalances, propose routing strategies, find computation that could be prepared in advance, and help write production kernels. OpenAI reports that this work, combined with other kernel improvements, reduced its total serving cost by about 20 percent.
+In [a July 2026 engineering account](https://openai.com/index/gpt-5-6-frontier-intelligence-efficiency/) that inspired this essay, OpenAI reports using GPT-5.6 Sol and Codex to inspect production traffic, identify imbalances, propose routing strategies, find computation that could be prepared in advance, and help write production kernels. OpenAI reports that this work, combined with other kernel improvements, reduced its total serving cost by about 20 percent.
 
 That figure should be read carefully. It is an internal result reported by OpenAI for its own serving stack. It is not a promise that every GPT-5.6 request, workload, or external application becomes exactly 20 percent cheaper.
 
@@ -140,7 +140,7 @@ The model cannot fully generate token 4 before tokens 1 through 3 are known. Tha
 
 Think of a teacher checking a familiar sequence. Instead of writing `1, 2, 3, 4, 5, 6` one item at a time, the teacher lets a student draft the sequence and verifies it. When the student is usually right, verification can be faster than producing every item from scratch.
 
-{{< responsive-image src="images/illustrations/speculative-decoding-explained.png" class="article-figure article-figure-plain article-figure-responsive article-figure-narrow" sizes="(max-width: 700px) calc(100vw - 48px), 896px" link="true" alt="A two part diagram comparing sequential autoregressive generation with speculative decoding, where a draft model proposes tokens and the target model accepts or corrects them in parallel before the next iteration." >}}
+{{< responsive-image src="images/illustrations/speculative-decoding-explained.png" class="article-figure article-figure-plain article-figure-responsive article-figure-narrow" sizes="(max-width: 700px) calc(100vw - 48px), 896px" link="true" alt="A two part diagram comparing sequential autoregressive generation with speculative decoding, where a draft model proposes tokens and the target model accepts or corrects them in parallel before the next iteration." caption="A draft model proposes several tokens. The target model verifies them together." >}}
 
 The benefit depends on how quickly the draft model runs and how often its proposals are accepted. A poor draft creates extra work. A good one reduces the expensive serial work performed by the primary model.
 
@@ -148,7 +148,7 @@ The acceptance rate is only part of the equation. A draft model can be accurate 
 
 This is an important pattern in systems optimisation: an elegant technique on paper can lose to overhead in production. The relevant question is not whether speculation exists, but whether it reduces end to end cost and latency under real traffic.
 
-OpenAI also reports that GPT-5.6 Sol helped design and run hundreds of experiments on its draft models, including changes to their size, architecture, and features. It helped monitor training and investigate hardware failures or instability. According to OpenAI, the resulting changes improved token generation efficiency by more than 15 percent in its internal system.
+[OpenAI also reports](https://openai.com/index/gpt-5-6-frontier-intelligence-efficiency/) that GPT-5.6 Sol helped design and run hundreds of experiments on its draft models, including changes to their size, architecture, and features. It helped monitor training and investigate hardware failures or instability. According to OpenAI, the resulting changes improved token generation efficiency by more than 15 percent in its internal system.
 
 Again, this is a reported systems result, not a universal speed guarantee. Its broader importance is the method: the model being served can also help improve the mechanism that serves it.
 
@@ -158,7 +158,7 @@ Suppose a user provides twenty pages of text and asks for a summary. The model s
 
 Transformers retain intermediate attention information in a **key value cache**, usually shortened to KV cache. During the initial processing of uncached input, the system builds this state. While generating output, it repeatedly reads and extends the state.
 
-{{< responsive-image src="images/illustrations/kv-cache-prefill-decode.png" class="article-figure article-figure-plain article-figure-responsive" link="true" alt="A diagram showing how transformer keys and values are cached during prefill, then restored and extended during later decoding steps instead of being recomputed from the beginning." >}}
+{{< responsive-image src="images/illustrations/kv-cache-prefill-decode.png" class="article-figure article-figure-plain article-figure-responsive" link="true" alt="A diagram showing how transformer keys and values are cached during prefill, then restored and extended during later decoding steps instead of being recomputed from the beginning." caption="The KV cache reuses attention state from earlier tokens instead of recomputing it at every step." >}}
 
 The KV cache saves computation, but it consumes memory and grows with the sequence. That creates a scheduling problem. Consider two requests:
 
@@ -233,7 +233,7 @@ The harness also determines when to stop. An agent that continues researching af
 
 The most important word in the entire discussion is **compounding**.
 
-{{< responsive-image src="images/illustrations/model-inference-harness-compounding.png" class="article-figure article-figure-plain article-figure-responsive" alt="A conceptual diagram showing model intelligence, inference infrastructure, and the agentic harness combining to lower cost and latency per accepted outcome." >}}
+{{< responsive-image src="images/illustrations/model-inference-harness-compounding.png" class="article-figure article-figure-plain article-figure-responsive" alt="A conceptual diagram showing model intelligence, inference infrastructure, and the agentic harness combining to lower cost and latency per accepted outcome." caption="Small gains across all three layers can combine into a much larger system level improvement." >}}
 
 Suppose an agent begins with an illustrative cost index of 100. Four independent changes reduce the remaining cost:
 
