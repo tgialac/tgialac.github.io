@@ -21,7 +21,7 @@ In short:
 
 > AI does not necessarily become cheaper and faster because the model is smaller. Often, the same powerful model is simply running on a much smarter system.
 
-## What Do Frontier Intelligence and Frontier Efficiency Mean?
+## Frontier Intelligence, Frontier Efficiency
 
 **Frontier intelligence** means capability at the leading edge of what current models can do. This includes difficult coding, complex reasoning, research, tool use, and long workflows.
 
@@ -29,21 +29,9 @@ In short:
 
 GPT 5.6 was trained with the goal of doing **more work per token**. Each token should contribute more directly to solving the problem instead of spending computation going in circles. OpenAI also describes this idea as getting more intelligence from every token and evaluates efficiency in terms of **performance per dollar**, which means the result produced for each unit of cost. [OpenAI](https://openai.com/index/gpt-5-6-frontier-intelligence-efficiency/)
 
-Here is a simple example.
+A simple example makes the idea easier to see. Suppose Model A needs **10,000 tokens to complete a task**, while Model B needs **5,000 tokens to complete the same task**. If the quality is equivalent, Model B has better **intelligence per token**.
 
-Model A needs:
-
-**10,000 tokens to complete the task**
-
-Model B needs:
-
-**5,000 tokens to complete the same task**
-
-If the quality is equivalent, Model B has better **intelligence per token**.
-
-## How Are Sol, Terra, and Luna Different?
-
-GPT 5.6 is a **family**, not a single model.
+The same principle explains why GPT 5.6 is a **family**, not a single model. Different tasks need different levels of intelligence, speed, and cost.
 
 | Model | A simple way to think about it |
 | --- | --- |
@@ -51,9 +39,9 @@ GPT 5.6 is a **family**, not a single model.
 | **GPT 5.6 Terra** | The balanced option for intelligence and cost |
 | **GPT 5.6 Luna** | The most cost conscious option for high volume workloads |
 
-OpenAI describes [Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol) as the flagship model for complex professional work, [Terra](https://developers.openai.com/api/docs/models/gpt-5.6-terra) as the model that balances intelligence and cost, and [Luna](https://developers.openai.com/api/docs/models/gpt-5.6-luna) as the model for cost sensitive, high volume workloads.
+In the official OpenAI documentation, [Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol) is the flagship model for complex professional work, [Terra](https://developers.openai.com/api/docs/models/gpt-5.6-terra) balances intelligence and cost, and [Luna](https://developers.openai.com/api/docs/models/gpt-5.6-luna) is designed for cost sensitive, high volume workloads.
 
-The philosophy is not:
+The lesson is not:
 
 **Always use the most powerful model.**
 
