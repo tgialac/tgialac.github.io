@@ -4,7 +4,7 @@
 {{- end -}}
 {{- $small := $source.Resize "720x webp q82" -}}
 {{- $medium := $source.Resize "1200x webp q82" -}}
-{{- $large := $source.Process "webp q84" -}}
+{{- $large := $source.Fit "1672x1672 webp q84" -}}
 {{- $sizes := .Get "sizes" | default "(max-width: 700px) calc(100vw - 48px), 1217px" -}}
 {{- $linked := eq (.Get "link") "true" -}}
 <figure class="{{ .Get "class" }}">

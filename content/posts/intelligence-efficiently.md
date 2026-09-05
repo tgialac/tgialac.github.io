@@ -152,6 +152,8 @@ Suppose a user provides twenty pages of text and asks for a summary. The model s
 
 Transformers retain intermediate attention information in a **key value cache**, usually shortened to KV cache. During the initial processing of uncached input, the system builds this state. While generating output, it repeatedly reads and extends the state.
 
+{{< responsive-image src="images/illustrations/kv-cache-prefill-decode.png" class="article-figure article-figure-plain article-figure-responsive" link="true" alt="A diagram showing how transformer keys and values are cached during prefill, then restored and extended during later decoding steps instead of being recomputed from the beginning." >}}
+
 The KV cache saves computation, but it consumes memory and grows with the sequence. That creates a scheduling problem. Consider two requests:
 
 | Workload | Input | Output |
