@@ -8,6 +8,11 @@ tags: ["AI Infrastructure", "Inference", "AI Agents", "Efficiency"]
 draft: false
 ---
 
+<figure class="article-figure article-figure-hero">
+  <img src="/images/covers/intelligence-efficiently.png" width="1672" height="941" loading="eager" fetchpriority="high" decoding="async" alt="An organised modern restaurant kitchen where a head chef, kitchen staff, and manager coordinate work across specialised stations.">
+  <figcaption>Frontier AI is a systems problem. The chef, the kitchen, and the manager become efficient only when they are designed to work together.</figcaption>
+</figure>
+
 You can think of an AI system as a restaurant.
 
 **The model is the chef.** A better chef can handle harder dishes. In AI, that means difficult coding, complex reasoning, research, tool use, and work that unfolds across many steps.
