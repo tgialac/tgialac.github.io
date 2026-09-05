@@ -4,10 +4,18 @@
 {{- end -}}
 {{- $small := $source.Resize "720x webp q82" -}}
 {{- $medium := $source.Resize "1200x webp q82" -}}
-{{- $large := $source.Resize "1672x webp q84" -}}
+{{- $large := $source.Process "webp q84" -}}
+{{- $sizes := .Get "sizes" | default "(max-width: 700px) calc(100vw - 48px), 1217px" -}}
+{{- $linked := eq (.Get "link") "true" -}}
 <figure class="{{ .Get "class" }}">
+  {{- if $linked }}
+  <a class="article-image-link" href="{{ $large.RelPermalink }}" target="_blank" rel="noopener" aria-label="Open this diagram at full size">
+  {{- end }}
   <picture>
-    <source type="image/webp" srcset="{{ $small.RelPermalink }} 720w, {{ $medium.RelPermalink }} 1200w, {{ $large.RelPermalink }} 1672w" sizes="(max-width: 700px) calc(100vw - 48px), 1217px">
-    <img src="{{ $large.RelPermalink }}" width="{{ $large.Width }}" height="{{ $large.Height }}" loading="{{ .Get "loading" | default "lazy" }}"{{ with .Get "fetchpriority" }} fetchpriority="{{ . }}"{{ end }} decoding="async" alt="{{ .Get "alt" }}">
+    <source type="image/webp" srcset="{{ $small.RelPermalink }} 720w, {{ $medium.RelPermalink }} 1200w, {{ $large.RelPermalink }} {{ $large.Width }}w" sizes="{{ $sizes }}">
+    <img src="{{ $large.RelPermalink }}" width="{{ $large.Width }}" height="{{ $large.Height }}" style="aspect-ratio: {{ $large.Width }} / {{ $large.Height }}; height: auto;" loading="{{ .Get "loading" | default "lazy" }}"{{ with .Get "fetchpriority" }} fetchpriority="{{ . }}"{{ end }} decoding="async" alt="{{ .Get "alt" }}">
   </picture>
+  {{- if $linked }}
+  </a>
+  {{- end }}
 </figure>

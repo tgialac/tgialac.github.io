@@ -134,6 +134,8 @@ The model cannot fully generate token 4 before tokens 1 through 3 are known. Tha
 
 Think of a teacher checking a familiar sequence. Instead of writing `1, 2, 3, 4, 5, 6` one item at a time, the teacher lets a student draft the sequence and verifies it. When the student is usually right, verification can be faster than producing every item from scratch.
 
+{{< responsive-image src="images/illustrations/speculative-decoding-explained.png" class="article-figure article-figure-plain article-figure-responsive article-figure-narrow" sizes="(max-width: 700px) calc(100vw - 48px), 896px" link="true" alt="A two part diagram comparing sequential autoregressive generation with speculative decoding, where a draft model proposes tokens and the target model accepts or corrects them in parallel before the next iteration." >}}
+
 The benefit depends on how quickly the draft model runs and how often its proposals are accepted. A poor draft creates extra work. A good one reduces the expensive serial work performed by the primary model.
 
 The acceptance rate is only part of the equation. A draft model can be accurate but too slow to help. A very fast draft can be useless if most proposals are rejected. The length of each proposed block, the verification cost, and the shape of the workload all influence the result. There is no universally best draft model, just as there is no universally best kitchen station layout.
@@ -223,7 +225,7 @@ The harness also determines when to stop. An agent that continues researching af
 
 The most important word in the entire discussion is **compounding**.
 
-{{< responsive-image src="images/illustrations/model-inference-harness-compounding.png" class="article-figure article-figure-plain" alt="A conceptual diagram showing model intelligence, inference infrastructure, and the agentic harness combining to lower cost and latency per accepted outcome." >}}
+{{< responsive-image src="images/illustrations/model-inference-harness-compounding.png" class="article-figure article-figure-plain article-figure-responsive" alt="A conceptual diagram showing model intelligence, inference infrastructure, and the agentic harness combining to lower cost and latency per accepted outcome." >}}
 
 Suppose an agent begins with an illustrative cost index of 100. Four independent changes reduce the remaining cost:
 
